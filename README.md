@@ -1,5 +1,7 @@
 # Interpretador-Portugol
 
+Isso foi um dos meus primeiros projetos em outra conta minha, logo tem uns comentários bizonhos de quando eu tava aprendendo.
+
 Interpretador de **Portugol** escrito em **C**. Desenvolvido para aprendizado e uso em projetos futuros. A sintaxe é baseada no [Portugol-Webstudio](https://github.com/dgadelha/Portugol-Webstudio).
 
 > Projeto em desenvolvimento. Feedbacks e contribuições são bem-vindos.
