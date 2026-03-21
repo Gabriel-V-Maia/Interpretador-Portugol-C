@@ -20,7 +20,9 @@ typedef enum {
 typedef struct TOKEN_STRUCT 
 {
     TokenType type;
-    char* value;
+    char *value;
+    int line;
+    int column;
 } token_T;
 
 token_T* init_token(TokenType type, char* value);

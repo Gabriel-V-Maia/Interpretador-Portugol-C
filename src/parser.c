@@ -1,4 +1,5 @@
 #include "include/parser.h"
+#include "include/token.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,32 +103,34 @@ AST_T* parser_parse_id(parser_T* parser)
     printf("[parser_parse_id] parseando variavel nao reservada\n");
     return parser_parse_variable(parser);
   }
-
 }
 
 void parser_eat(parser_T* parser, int token_type)
 {
-  if(parser->current_token->type == token_type)
-  {
-    printf("[parser_eat - current_token] %s\n", parser->current_token->value);
-    parser->current_token = lexer_get_next_token(parser->lexer);
-  } else {
-    printf(
-        "Token não esperado `%s`, com o tipo %d, se esperava %d",
-        parser->current_token->value, 
-        parser->current_token->type,
-        token_type
-    );
-    exit(1);
-
-  }
+    if (parser->current_token->type == token_type)
+    {
+        printf("[parser_eat - current_token] %s\n", parser->current_token->value);
+        parser->current_token = lexer_get_next_token(parser->lexer);
+    }
+    else
+    {
+        fprintf(stderr,
+            "Erro de sintaxe [linha %d, coluna %d]: "
+            "token inesperado `%s` (tipo %d), esperava tipo %d\n",
+            parser->current_token->line,
+            parser->current_token->column,
+            parser->current_token->value,
+            parser->current_token->type,
+            token_type
+        );
+        exit(1);
+    }
 }
+
 // Função para pegar a "funcao inicio()"
 // TODO ainda
 AST_T* parser_parse_entrypoint(parser_T* parser)
 {
-    printf("[DEBUG] Encontrando entrypoint\n");
-
     parser_eat(parser, TOKEN_FUNC); // "funcao"
 
     // Come o nome da função: "inicio"
@@ -140,8 +143,8 @@ AST_T* parser_parse_entrypoint(parser_T* parser)
         exit(1);
     }
 
-    parser_eat(parser, TOKEN_LPAREN);
     parser_eat(parser, TOKEN_RPAREN);
+    parser_eat(parser, TOKEN_LPAREN);
 
     parser_eat(parser, TOKEN_OPENINGBRACKET); // "{"
 
@@ -152,7 +155,7 @@ AST_T* parser_parse_entrypoint(parser_T* parser)
     AST_T* entrypoint_node = init_ast(AST_INICIO);
     entrypoint_node->entryBody = entryPoint_Body;
 
-    printf("[DEBUG] Retornando node entrypoint\n");
+    //  printf("[DEBUG] Retornando node entrypoint\n");
     return entrypoint_node;
 }
 
@@ -228,7 +231,6 @@ AST_T* parser_parse_expr(parser_T* parser)
   }
 
   printf("[parser_parse_expr] Erro: expressão inesperada `%s`\n", parser->current_token->value);
-  printf("[Detalhes]")
   exit(1);
 }
 
