@@ -5,14 +5,19 @@
 #include "include/lexer.h"
 #include "include/parser.h"
 
-int main(int argc, char* argv[])
-{
-    const char *filepath = "examples/hello_world.por";
+int main(int argc, char *argv[]) {
+
+    if (argc < 2) {
+      printf("especifique um arquivo com código portugol\n");
+      return -1;
+   }
+  
+    const char *filepath = argv[1];
 
     FILE *fp = fopen(filepath, "rb");
     if (fp == NULL)
     {
-        printf("[Main.c] Falha ao abrir arquivo: %s \n", strerror(errno));
+        printf("Falha ao abrir arquivo: %s \n", strerror(errno));
         return -1;
     }
 
