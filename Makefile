@@ -1,22 +1,24 @@
-exec = portugol.out
-sources = $(wildcard src/*.c)
-objects = $(sources:.c=.o)
-flags = -g
+CC        = gcc
+EXEC      = build/portugol.out
+SRC_DIR   = src
+BUILD_DIR = build
 
-$(exec): $(objects)
-	gcc $(objects) $(flags) -o $(exec)
+SOURCES   = $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/helpers/*.c)
+OBJECTS   = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SOURCES))
 
+CFLAGS    = -g -Wall -Wextra -I$(SRC_DIR)/include
 
-%.o: %.c include/%.h
-	gcc -c $(flags) $< -o $@
+$(EXEC): $(OBJECTS)
+	$(CC) $(OBJECTS) $(CFLAGS) -o $(EXEC)
 
-install: 
-	make 
-	cp ./portugol.out /usr/local/bin/portugol
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) -c $(CFLAGS) $< -o $@
+
+install: $(EXEC)
+	cp $(EXEC) /usr/local/bin/portugol
 
 clean:
-	-rm *.out 
-	-rm *.o 
-	-rm src/*.o 
+	-rm -rf $(BUILD_DIR)
 
-
+.PHONY: install clean
