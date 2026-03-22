@@ -1,7 +1,11 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+
 #include "include/lexer.h"
 #include "include/parser.h"
 #include "include/AST.H"
@@ -25,19 +29,34 @@ static char* read_file(const char* filepath)
     return buffer;
 }
 
-int main(int argc, char* argv[])
-{
-    PANIC_IF(argc < 2, "uso: portugol <arquivo.por>");
+int main(int argc, char *argv[]) {
+  int debug = 0;
+  int opt;
 
-    char* source = read_file(argv[1]);
+  while ((opt = getopt(argc, argv, "d")) != -1) {
+    switch (opt) {
+    case 'd':
+      debug = 1;
+      break;
 
-    lexer_T*  lexer  = init_lexer(source);
-    parser_T* parser = init_parser(lexer);
-    AST_T*    root   = parser_parse(parser);
+    default:
+      debug = 0;
+      break;
+    }
+  };
 
-    free(source);
-    ast_print(root);
-    printf("\n");
+  
+  PANIC_IF(optind >= argc, "uso: portugol [-d] <arquivo.por>");
 
-    return 0;
+  char* source = read_file(argv[optind]);
+
+  lexer_T*  lexer  = init_lexer(source);
+  parser_T* parser = init_parser(lexer);
+  AST_T*    root   = parser_parse(parser);
+
+  free(source);
+  ast_print(root);
+  printf("\n");
+
+  return 0;
 }
