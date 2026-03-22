@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "lexer.h"
 #include "AST.H"
+#include "token.h"
 
 #ifndef PARSER_H
 #define PARSER_H
@@ -14,7 +15,7 @@ typedef struct PARSER_STRUCT
 
 parser_T* init_parser(lexer_T* lexer);
 
-void parser_eat(parser_T* parser, int token_type);
+void parser_eat(parser_T* parser, TokenType token_type);
 
 AST_T* parser_parse(parser_T* parser);
 

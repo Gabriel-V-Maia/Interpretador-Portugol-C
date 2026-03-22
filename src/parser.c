@@ -46,7 +46,7 @@ AST_T* parser_parse_variable_definition(parser_T* parser)
   // come o "="
   parser_eat(parser, TOKEN_EQUALS);
 
-  printf("[parser_parse_variable_definition] parseand o valor -> %s\n", &parser->current_token->type);
+  printf("[parser_parse_variable_definition] parseand o valor -> %d\n", parser->current_token->type);
 
   // parsea o valor 
   AST_T* variable_value = parser_parse_expr(parser);
@@ -105,7 +105,7 @@ AST_T* parser_parse_id(parser_T* parser)
   }
 }
 
-void parser_eat(parser_T* parser, int token_type)
+void parser_eat(parser_T* parser, TokenType token_type)
 {
     if (parser->current_token->type == token_type)
     {

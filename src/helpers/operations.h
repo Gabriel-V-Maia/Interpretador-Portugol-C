@@ -1,5 +1,5 @@
-#import <stdio.h>
-#import <stdlib.h>
+#include <stdio.h>
+#include_next <stdlib.h>
 
 #ifndef OPERATIONS_H
 #define OPERATIONS_H
