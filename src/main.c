@@ -4,55 +4,40 @@
 #include <errno.h>
 #include "include/lexer.h"
 #include "include/parser.h"
+#include "include/AST.H"
+#include "helpers/operations.h"
 
-int main(int argc, char *argv[]) {
-
-    if (argc < 2) {
-      printf("especifique um arquivo com código portugol\n");
-      return -1;
-   }
-  
-    const char *filepath = argv[1];
-
-    FILE *fp = fopen(filepath, "rb");
-    if (fp == NULL)
-    {
-        printf("Falha ao abrir arquivo: %s \n", strerror(errno));
-        return -1;
-    }
+static char* read_file(const char* filepath)
+{
+    FILE* fp = fopen(filepath, "rb");
+    PANIC_IF(fp == NULL, "falha ao abrir '%s': %s", filepath, strerror(errno));
 
     fseek(fp, 0, SEEK_END);
-    long fileSize = ftell(fp);
+    long size = ftell(fp);
     rewind(fp);
 
-    char *buffer = malloc(fileSize + 1);
-    if (buffer == NULL)
-    {
-        printf("[Main.c] Falha ao alocar memória\n");
-        fclose(fp);
-        return -1;
-    }
+    char* buffer = malloc(size + 1);
+    PANIC_IF(buffer == NULL, "falha ao alocar memoria");
 
-    size_t read_size = fread(buffer, 1, fileSize, fp);
-    buffer[read_size] = '\0';
+    size_t bytes_read = fread(buffer, 1, size, fp);
+    buffer[bytes_read] = '\0';
     fclose(fp);
+    return buffer;
+}
 
-    lexer_T* lexer = init_lexer(buffer);
+int main(int argc, char* argv[])
+{
+    PANIC_IF(argc < 2, "uso: portugol <arquivo.por>");
+
+    char* source = read_file(argv[1]);
+
+    lexer_T*  lexer  = init_lexer(source);
     parser_T* parser = init_parser(lexer);
-    AST_T* root = parser_parse(parser);
+    AST_T*    root   = parser_parse(parser);
 
-    free(buffer); 
-    if (root->type == AST_PROGRAMA) {
-        printf("Root type -> AST_PROGRAMA (%d)\n", root->type);
-
-        if (root->body && root->body->type == AST_COMPOUND) {
-            printf("Compound block size -> %lu\n", root->body->compound_size);
-        } else {
-            printf("Erro: programa.body não é um bloco composto\n");
-        }
-    } else {
-        printf("Erro: AST raiz não é do tipo AST_PROGRAMA\n");
-    }
+    free(source);
+    ast_print(root);
+    printf("\n");
 
     return 0;
 }
