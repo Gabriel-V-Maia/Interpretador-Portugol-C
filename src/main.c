@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
       break;
 
     default:
-      debug = 0;
+      PANIC("flag desconhecida: -%c\n uso: portugol [-d] <arquivo.por>", optopt);
       break;
     }
   };
