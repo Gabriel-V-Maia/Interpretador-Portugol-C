@@ -10,6 +10,7 @@
 #include "include/parser.h"
 #include "include/AST.H"
 #include "helpers/operations.h"
+#include "diagnostics/diagnostics.h"
 
 static char* read_file(const char* filepath)
 {
@@ -51,7 +52,8 @@ int main(int argc, char *argv[]) {
   char* source = read_file(argv[optind]);
 
   lexer_T*  lexer  = init_lexer(source);
-  parser_T* parser = init_parser(lexer);
+  Diagnostic* diag = diagnostic_create(argv[optind], source);
+  parser_T* parser = init_parser(lexer, diag);
   AST_T*    root   = parser_parse(parser);
 
   free(source);
