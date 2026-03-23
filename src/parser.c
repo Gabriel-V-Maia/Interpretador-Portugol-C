@@ -1,5 +1,7 @@
 #include "include/parser.h"
 #include "include/token.h"
+#include "diagnostics/diagnostics.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,12 +12,13 @@
 // TODO LIST
 // - Fazer funções incompletas
 
-parser_T* init_parser(lexer_T* lexer)
+parser_T* init_parser(lexer_T* lexer, Diagnostic* diag)
 {
     parser_T* parser = calloc(1, sizeof(struct PARSER_STRUCT));
     parser->lexer = lexer;
     parser->current_token = lexer_get_next_token(lexer);
-
+    parser->diagnostic = diag;
+    
     return parser;
 }
 
@@ -107,23 +110,14 @@ AST_T* parser_parse_id(parser_T* parser)
 
 void parser_eat(parser_T* parser, TokenType token_type)
 {
-    if (parser->current_token->type == token_type)
-    {
-        printf("[parser_eat - current_token] %s\n", parser->current_token->value);
+    if (parser->current_token->type == token_type) {
         parser->current_token = lexer_get_next_token(parser->lexer);
-    }
-    else
-    {
-        fprintf(stderr,
-            "Erro de sintaxe [linha %d, coluna %d]: "
-            "token inesperado `%s` (tipo %d), esperava tipo %d\n",
-            parser->current_token->line,
-            parser->current_token->column,
+    } else {
+        diagnostic_error(parser->diagnostic, parser->current_token,
+            "token inesperado `%s` (tipo %d), esperava tipo %d",
             parser->current_token->value,
             parser->current_token->type,
-            token_type
-        );
-        exit(1);
+            token_type);
     }
 }
 

@@ -2,6 +2,7 @@
 #include "lexer.h"
 #include "AST.H"
 #include "token.h"
+#include "../diagnostics/diagnostics.h"
 
 #ifndef PARSER_H
 #define PARSER_H
@@ -9,11 +10,11 @@
 typedef struct PARSER_STRUCT
 {
   lexer_T* lexer;
-  token_T* current_token;
-
+  token_T *current_token;
+  Diagnostic* diagnostic;
 } parser_T;
 
-parser_T* init_parser(lexer_T* lexer);
+parser_T* init_parser(lexer_T* lexer, Diagnostic* diag);
 
 void parser_eat(parser_T* parser, TokenType token_type);
 
