@@ -225,9 +225,10 @@ AST_T* parser_parse_expr(parser_T* parser)
     case TOKEN_STRING: return parser_parse_string(parser);
     case TOKEN_REAL: return parser_parse_real(parser);
    }
-  
-  diagnostic_error(parser->diagnostic, parser->current_token,
-                   "expressão inexperada %s");
+
+   diagnostic_error(parser->diagnostic, parser->current_token,
+                    "expressão inexperada %s",
+                    parser->current_token->value);
 }
 
 AST_T* parser_parse_factor(parser_T* parser)
