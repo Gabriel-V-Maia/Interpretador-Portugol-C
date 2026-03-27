@@ -87,7 +87,7 @@ void diagnostic_emit(Diagnostic* diag, DiagnosticLevel level,
                 ANSI_CYAN, token->line, ANSI_RESET,
                 ANSI_CYAN, ANSI_RESET,
                 source_line);
-        fprintf(stderr, "   %s|%s ", ANSI_CYAN, ANSI_RESET);
+        fprintf(stderr, "    %s|%s ", ANSI_CYAN, ANSI_RESET);
 
         for (int i = 1; i < token->column; i++)
             fprintf(stderr, " ");
