@@ -227,7 +227,7 @@ AST_T* parser_parse_expr(parser_T* parser)
    }
 
    diagnostic_error(parser->diagnostic, parser->current_token,
-                    "expressão inexperada %s",
+                    "expressão inesperada %s",
                     parser->current_token->value);
 }
 
