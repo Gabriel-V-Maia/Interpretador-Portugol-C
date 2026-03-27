@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "include/parser.h"
+#include "include/AST.H"
 #include "include/token.h"
 #include "diagnostics/diagnostics.h"
 
@@ -62,12 +63,20 @@ AST_T* parser_parse_variable_definition(parser_T* parser)
   variable_definition->variable_definition_value = variable_value;
 
 
-  debugger_print(parser->debugger_instance,
-                 "variavel definida como: name: '%s', value: '%s'",
-                 variable_definition->variable_definition_varname,
-                 variable_definition->variable_definition_value);
+  switch (variable_definition->variable_definition_value->type) {
+  case AST_STRING:
+    debugger_print(parser->debugger_instance,
+                   "variavel definida como: '%s', value: '%s' (type: %i)",
+                   variable_definition->variable_definition_varname,
+                   variable_definition->variable_definition_value->string_value,
+                   variable_definition->type);
 
-  
+  default:
+     debugger_print(parser->debugger_instance,
+                 "variavel definida como: '%s', value: '%s'",
+                 variable_definition->variable_definition_varname,
+                 variable_definition->variable_definition_value->real_value);
+  }
   return variable_definition;
 }
 
