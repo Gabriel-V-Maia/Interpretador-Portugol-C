@@ -1,20 +1,24 @@
 #include <stddef.h>
 
+#include "../debugger/debugger.h"
+#include "token.h"
+
 #ifndef LEXER_H
 #define LEXER_H
-#include "token.h"
 
 typedef struct LEXER_STRUCT
 {
     char         currentChar;
     unsigned int index;
     char*        contents;
-    size_t       contents_len; // <-- novo
+    size_t       contents_len; 
     int          line;
-    int          column;
+    int column;
+  Debugger* debugger_instance;
+    
 } lexer_T; 
 
-lexer_T* init_lexer(char* contents);
+lexer_T* init_lexer(char* contents, Debugger* debugger_instance);
 void     lexer_advance(lexer_T* lexer);
 void     lexer_skip_whitespace(lexer_T* lexer);
 token_T* lexer_get_next_token(lexer_T* lexer);

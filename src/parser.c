@@ -1,23 +1,25 @@
-#include "include/parser.h"
-#include "include/token.h"
-#include "diagnostics/diagnostics.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define DEBUG 1
+#include "include/parser.h"
+#include "include/token.h"
+#include "diagnostics/diagnostics.h"
+
+#include "debugger/debugger.h"
+
 
 
 // TODO LIST
 // - Fazer funções incompletas
 
-parser_T* init_parser(lexer_T* lexer, Diagnostic* diag)
+parser_T* init_parser(lexer_T* lexer, Diagnostic* diag, Debugger *debugger)
 {
     parser_T* parser = calloc(1, sizeof(struct PARSER_STRUCT));
     parser->lexer = lexer;
     parser->current_token = lexer_get_next_token(lexer);
     parser->diagnostic = diag;
+    parser->debugger_instance = debugger;
     
     return parser;
 }
@@ -33,8 +35,7 @@ AST_T* parser_parse_real(parser_T* parser)
 }
 
 AST_T* parser_parse_variable_definition(parser_T* parser)
-{ 
-  printf("[parser_parse_variable_definition] iniciando\n");
+{
   // tipo nome = valor 
   // inteiro numero = 10
 
@@ -49,24 +50,24 @@ AST_T* parser_parse_variable_definition(parser_T* parser)
   // come o "="
   parser_eat(parser, TOKEN_EQUALS);
 
-  printf("[parser_parse_variable_definition] parseand o valor -> %d\n", parser->current_token->type);
-
+  debugger_print(parser->debugger_instance, "Parseando o valor do tipo -> %d", parser->current_token->type);
+  
   // parsea o valor 
   AST_T* variable_value = parser_parse_expr(parser);
-
-  #ifdef DEBUG
-    printf("[PARSER - variable_definition] type: %s, name: %s, value: ", variable_type, variable_name);
-    ast_print(variable_value);
-    printf("\n");
-  #endif 
-
-
+   
   // Declaramos a definição da variavel e então retornamos ela 
   
   AST_T* variable_definition = init_ast(AST_VARIABLE_DEFINITION);
   variable_definition->variable_definition_varname = variable_name;
   variable_definition->variable_definition_value = variable_value;
 
+
+  debugger_print(parser->debugger_instance,
+                 "variavel definida como: name: '%s', value: '%s'",
+                 variable_definition->variable_definition_varname,
+                 variable_definition->variable_definition_value);
+
+  
   return variable_definition;
 }
 
@@ -100,10 +101,10 @@ AST_T* parser_parse_id(parser_T* parser)
   */ 
 
   if (isReserved(parser->current_token->value)) {
-    printf("[parser_parse_id] parseando def variavel (reservado)\n");
+    debugger_print(parser->debugger_instance, "parseando def variavel %s (reservado)\n", parser->current_token->value);
     return parser_parse_variable_definition(parser);
   } else { 
-    printf("[parser_parse_id] parseando variavel nao reservada\n");
+    debugger_print(parser->debugger_instance,"parseando variavel nao reservada %s\n", parser->current_token->value);
     return parser_parse_variable(parser);
   }
 }
@@ -137,8 +138,8 @@ AST_T* parser_parse_entrypoint(parser_T* parser)
         exit(1);
     }
 
-    parser_eat(parser, TOKEN_RPAREN);
     parser_eat(parser, TOKEN_LPAREN);
+    parser_eat(parser, TOKEN_RPAREN);
 
     parser_eat(parser, TOKEN_OPENINGBRACKET); // "{"
 
@@ -149,7 +150,8 @@ AST_T* parser_parse_entrypoint(parser_T* parser)
     AST_T* entrypoint_node = init_ast(AST_INICIO);
     entrypoint_node->entryBody = entryPoint_Body;
 
-    //  printf("[DEBUG] Retornando node entrypoint\n");
+    debugger_print(parser->debugger_instance, "Retornando node entrypoint");
+    
     return entrypoint_node;
 }
 
@@ -170,7 +172,7 @@ AST_T* parser_parse(parser_T* parser)
     if (strcmp(parser->current_token->value, "programa") == 0)
         return parser_parse_programa(parser);
 
-    printf("Erro: programa deve começar com 'programa'\n");
+    diagnostic_error(parser->diagnostic, parser->current_token, "Programa deve começar com 'programa'");
     exit(1);
 }
 
@@ -182,8 +184,8 @@ AST_T* parser_parse_statement(parser_T* parser)
     case TOKEN_ID: return parser_parse_id(parser);
     case TOKEN_FUNC: return parser_parse_entrypoint(parser);
     default:
-          printf("Erro: declaração inesperada com token '%s'\n", parser->current_token->value);
-          exit(1);
+      diagnostic_error(parser->diagnostic, parser->current_token, "Declaração inesperada com '%s'", parser->current_token->value);
+      exit(1);
 
   }
 }
@@ -222,10 +224,10 @@ AST_T* parser_parse_expr(parser_T* parser)
   {
     case TOKEN_STRING: return parser_parse_string(parser);
     case TOKEN_REAL: return parser_parse_real(parser);
-  }
-
-  printf("[parser_parse_expr] Erro: expressão inesperada `%s`\n", parser->current_token->value);
-  exit(1);
+   }
+  
+  diagnostic_error(parser->diagnostic, parser->current_token,
+                   "expressão inexperada %s");
 }
 
 AST_T* parser_parse_factor(parser_T* parser)
@@ -262,10 +264,9 @@ AST_T* parser_parse_function_call(parser_T* parser)
 
             parser_eat(parser, TOKEN_STRING);
 
-            if (parser->current_token->type != TOKEN_RPAREN)
-            {
-                printf("[parser_parse_function_call] erro de sintaxe");
-                exit(1); 
+            if (parser->current_token->type != TOKEN_RPAREN) {
+              diagnostic_error(parser->diagnostic, parser->current_token,"Erro de sintaxe");
+              exit(1); 
             }
         }
     }
@@ -277,7 +278,7 @@ AST_T* parser_parse_function_call(parser_T* parser)
     ast_function->function_call_arguments = function_arguments;
     ast_function->function_call_arguments_size = argc;
 
-    printf("[parser_parse_function_call] parsing da função %s acabou!\n", function_name);
+    debugger_print(parser->debugger_instance, "Parsing da função %s acabou!", function_name);
 
     return ast_function;
 }
@@ -285,20 +286,15 @@ AST_T* parser_parse_function_call(parser_T* parser)
 AST_T* parser_parse_variable(parser_T* parser)
 {
   char* token_value = parser->current_token->value;
-  // verificamos se é o entry point tlg 
-  if(strcmp(token_value, "inicio") == 0)
-  {
-    printf("[DEBUG] encontrado entryPoint\n");
-  }
 
-  printf("[parser_parse_variable] parsing %s\n", parser->current_token->value);
+  debugger_print(parser->debugger_instance,"parsing %s\n", parser->current_token->value);
 
   parser_eat(parser, TOKEN_ID);
   
   // caso o nosso token for um parenteses, vamos parsear como função
   if (parser->current_token->type == TOKEN_RPAREN || strcmp(parser->current_token->value, "inicio") == 0)
   {
-    printf("[parser_parse_string] parsing function, %s\n", parser->current_token->value);
+    debugger_print(parser->debugger_instance, "parsing function, %s\n", parser->current_token->value);
     return parser_parse_function_call(parser);
   }
   
@@ -306,7 +302,7 @@ AST_T* parser_parse_variable(parser_T* parser)
   ast_variable->variable_name = token_value;
 
   parser_eat(parser, TOKEN_ID);
-  printf("[parser_parse_variable] done parsing ast_variable, %s\n", ast_variable->variable_name);
+  debugger_print(parser->debugger_instance, "done parsing ast_variable, %s\n", ast_variable->variable_name);
  
   return ast_variable;
 }

@@ -9,12 +9,11 @@ struct Debugger {
   const char *module;
   int debug;
 
-  void (*print)(Debugger *self, const char *message);
 };
 
 extern Debugger debugger;
 
-void debugger_print(Debugger* self, const char* message);
+void debugger_print(Debugger* self, const char* fmt, ...);
 Debugger make_debugger(const char* module, int debug);
 
 #endif

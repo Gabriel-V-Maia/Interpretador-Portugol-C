@@ -1,9 +1,20 @@
+#include <stdarg.h>
+#include <stdio.h>
+
 #include "debugger.h"
 
-void debugger_print(Debugger* self, const char* message)
+void debugger_print(Debugger* self, const char* fmt, ...)
 {
-    if (!self->debug) return;
-    fprintf(stderr, "[%s] %s\n", self->module, message);
+  if (!self->debug)
+    return;
+
+  va_list args;
+  va_start(args, fmt);
+  fprintf(stderr, "[%s] ", self->module);
+
+  vfprintf(stderr, fmt, args);
+  fprintf(stderr, "\n");
+  va_end(args);
 }
 
 Debugger make_debugger(const char* module, int debug)
@@ -11,7 +22,6 @@ Debugger make_debugger(const char* module, int debug)
     return (Debugger){
         .module = module,
         .debug  = debug,
-        .print  = debugger_print,
     };
 }
 

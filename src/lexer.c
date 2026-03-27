@@ -1,18 +1,20 @@
 #include "include/lexer.h"
+#include "debugger/debugger.h"
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
 
-lexer_T* init_lexer(char* contents)
+lexer_T* init_lexer(char* contents, Debugger* debugger_instance)
 {
     lexer_T* lexer = calloc(1, sizeof(struct LEXER_STRUCT));
     lexer->contents      = contents;
-    lexer->contents_len  = strlen(contents); // calcula uma vez só
+    lexer->contents_len  = strlen(contents); 
     lexer->index         = 0;
     lexer->currentChar   = contents[0];
     lexer->line          = 1;
-    lexer->column        = 1;
+    lexer->column = 1;
+    lexer->debugger_instance = debugger_instance;
     return lexer;
 }
 
@@ -104,7 +106,7 @@ token_T* lexer_collect_id(lexer_T* lexer)
     else if (strcmp(value, "programa") == 0) token = init_token(TOKEN_PROGRAMA, value);
     else                                     token = init_token(TOKEN_ID,        value);
 
-    printf("[lexer_collect_id] Criado token %s (type=%d)\n", token->value, token->type);
+    debugger_print(lexer->debugger_instance, "Criado token %s com tipo %d", token->value, token->type);
     return stamp(lexer, token, start_line, start_col);
 }
 

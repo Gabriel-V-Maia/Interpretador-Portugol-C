@@ -11,6 +11,7 @@
 #include "include/AST.H"
 #include "helpers/operations.h"
 #include "diagnostics/diagnostics.h"
+#include "debugger/debugger.h"
 
 static char* read_file(const char* filepath)
 {
@@ -46,14 +47,23 @@ int main(int argc, char *argv[]) {
     }
   };
 
+  Debugger debugger = make_debugger("main", debug);
+
+
+  debugger_print(&debugger, "Debug mode enabled!");
   
   PANIC_IF(optind >= argc, "uso: portugol [-d] <arquivo.por>");
 
   char* source = read_file(argv[optind]);
 
-  lexer_T*  lexer  = init_lexer(source);
-  Diagnostic* diag = diagnostic_create(argv[optind], source);
-  parser_T* parser = init_parser(lexer, diag);
+  Debugger lexerDebugger = make_debugger("lexer", debug);
+  lexer_T *lexer = init_lexer(source, &lexerDebugger);
+
+  Diagnostic *diag = diagnostic_create(argv[optind], source);
+
+  Debugger parserDebugger = make_debugger("parser", debug);
+  parser_T *parser = init_parser(lexer, diag, &parserDebugger);
+  
   AST_T*    root   = parser_parse(parser);
 
   free(source);
