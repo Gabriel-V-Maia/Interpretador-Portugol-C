@@ -11,9 +11,6 @@
 
 
 
-// TODO LIST
-// - Fazer funções incompletas
-
 parser_T* init_parser(lexer_T* lexer, Diagnostic* diag, Debugger *debugger)
 {
     parser_T* parser = calloc(1, sizeof(struct PARSER_STRUCT));
@@ -37,27 +34,18 @@ AST_T* parser_parse_real(parser_T* parser)
 
 AST_T* parser_parse_variable_definition(parser_T* parser)
 {
-  // tipo nome = valor 
-  // inteiro numero = 10
-
-  // pegamos o TIPO da variavel 
   char* variable_type = parser->current_token->value;
   parser_eat(parser, TOKEN_ID);
 
-  // comemos o NOME IDENTIFICADOR da variavel 
   char* variable_name = parser->current_token->value; 
   parser_eat(parser, TOKEN_ID);
 
-  // come o "="
   parser_eat(parser, TOKEN_EQUALS);
 
   debugger_print(parser->debugger_instance, "Parseando o valor do tipo -> %d", parser->current_token->type);
   
-  // parsea o valor 
   AST_T* variable_value = parser_parse_expr(parser);
    
-  // Declaramos a definição da variavel e então retornamos ela 
-  
   AST_T* variable_definition = init_ast(AST_VARIABLE_DEFINITION);
   variable_definition->variable_definition_varname = variable_name;
   variable_definition->variable_definition_value = variable_value;
@@ -81,10 +69,8 @@ AST_T* parser_parse_variable_definition(parser_T* parser)
 }
 
 
-// TODO MELHORAR ISSO
 int isReserved(const char* value)
 {
-    
     static const char* reservedTypes[] = {"inteiro", "real", "logico", "cadeia"};
 
     int count = sizeof(reservedTypes) / sizeof(reservedTypes[0]);
@@ -97,18 +83,15 @@ int isReserved(const char* value)
     return 0;
 }
 
+int isBoolLiteral(const char* value)
+{
+    return strcmp(value, "verdadeiro") == 0 || strcmp(value, "falso") == 0;
+}
+
+AST_T* parser_parse_bool(parser_T* parser);
+
 AST_T* parser_parse_id(parser_T* parser)
 {
-
-  /*
-  if (strcmp(parser->current_token->value, "inteiro") == 0)
-  {
-    return parser_parse_variable_definition(parser);
-  } else {
-    return parser_parse_variable(parser);
-  }
-  */ 
-
   if (isReserved(parser->current_token->value)) {
     debugger_print(parser->debugger_instance, "parseando def variavel %s (reservado)\n", parser->current_token->value);
     return parser_parse_variable_definition(parser);
@@ -131,13 +114,10 @@ void parser_eat(parser_T* parser, TokenType token_type)
     }
 }
 
-// Função para pegar a "funcao inicio()"
-// TODO ainda
 AST_T* parser_parse_entrypoint(parser_T* parser)
 {
-    parser_eat(parser, TOKEN_FUNC); // "funcao"
+    parser_eat(parser, TOKEN_FUNC);
 
-    // Come o nome da função: "inicio"
     char* function_name = parser->current_token->value;
     parser_eat(parser, TOKEN_ID);
 
@@ -150,11 +130,11 @@ AST_T* parser_parse_entrypoint(parser_T* parser)
     parser_eat(parser, TOKEN_LPAREN);
     parser_eat(parser, TOKEN_RPAREN);
 
-    parser_eat(parser, TOKEN_OPENINGBRACKET); // "{"
+    parser_eat(parser, TOKEN_OPENINGBRACKET);
 
     AST_T* entryPoint_Body = parser_parse_statements(parser);
 
-    parser_eat(parser, TOKEN_CLOSINGBRACKET); // "}"
+    parser_eat(parser, TOKEN_CLOSINGBRACKET);
 
     AST_T* entrypoint_node = init_ast(AST_INICIO);
     entrypoint_node->entryBody = entryPoint_Body;
@@ -166,12 +146,12 @@ AST_T* parser_parse_entrypoint(parser_T* parser)
 
 AST_T* parser_parse_programa(parser_T* parser)
 {
-    parser_eat(parser, TOKEN_PROGRAMA); // "programa"
-    parser_eat(parser, TOKEN_OPENINGBRACKET); // "{"
+    parser_eat(parser, TOKEN_PROGRAMA);
+    parser_eat(parser, TOKEN_OPENINGBRACKET);
 
     parser_parse_statements(parser);
 
-    parser_eat(parser, TOKEN_CLOSINGBRACKET); // "}"
+    parser_eat(parser, TOKEN_CLOSINGBRACKET);
 
     return parser_parse_entrypoint(parser);
 }
@@ -232,25 +212,64 @@ AST_T* parser_parse_expr(parser_T* parser)
   switch(parser->current_token->type)
   {
     case TOKEN_STRING: return parser_parse_string(parser);
-    case TOKEN_REAL: return parser_parse_real(parser);
-   }
+    case TOKEN_REAL:   return parser_parse_real(parser);
+    case TOKEN_ID:
+    {
+      if (isBoolLiteral(parser->current_token->value))
+        return parser_parse_bool(parser);
 
-   diagnostic_error(parser->diagnostic, parser->current_token,
-                    "expressão inesperada %s",
-                    parser->current_token->value);
+      return parser_parse_variable(parser);
+    }
+  }
+
+  diagnostic_error(parser->diagnostic, parser->current_token,
+                   "expressão inesperada %s",
+                   parser->current_token->value);
+  exit(1);
 }
 
 AST_T* parser_parse_factor(parser_T* parser)
 {
+  switch (parser->current_token->type)
+  {
+    case TOKEN_REAL:   return parser_parse_real(parser);
+    case TOKEN_STRING: return parser_parse_string(parser);
+    case TOKEN_ID:
+    {
+      if (isBoolLiteral(parser->current_token->value))
+        return parser_parse_bool(parser);
 
+      return parser_parse_variable(parser);
+    }
+    case TOKEN_LPAREN:
+    {
+      parser_eat(parser, TOKEN_LPAREN);
+      AST_T* expr = parser_parse_expr(parser);
+      parser_eat(parser, TOKEN_RPAREN);
+      return expr;
+    }
+    default:
+      diagnostic_error(parser->diagnostic, parser->current_token,
+                       "fator inesperado '%s'",
+                       parser->current_token->value);
+      exit(1);
+  }
 }
+
 AST_T* parser_parse_term(parser_T* parser)
 {
+  AST_T* left = parser_parse_factor(parser);
+  return left;
+}
 
-};
+AST_T* parser_parse_bool(parser_T* parser)
+{
+  AST_T* ast_bool = init_ast(AST_REAL);
+  ast_bool->real_value = strcmp(parser->current_token->value, "verdadeiro") == 0 ? "1" : "0";
+  parser_eat(parser, TOKEN_ID);
+  return ast_bool;
+}
 
-
-// TODO ESSA BOMBA A
 AST_T* parser_parse_function_call(parser_T* parser)
 {
     char* function_name = parser->current_token->value;
@@ -261,23 +280,17 @@ AST_T* parser_parse_function_call(parser_T* parser)
     AST_T** function_arguments = NULL;
     size_t argc = 0;
 
-    if (parser->current_token->type != TOKEN_RPAREN)
+    while (parser->current_token->type != TOKEN_RPAREN &&
+           parser->current_token->type != TOKEN_END)
     {
-        while (parser->current_token->type != TOKEN_RPAREN)
-        {
-            char* arg_value = parser->current_token->value;
-            AST_T* arg_ast = init_ast(AST_VARIABLE);
-            arg_ast->variable_name = arg_value;
+        AST_T* arg = parser_parse_expr(parser);
 
-            function_arguments = realloc(function_arguments, sizeof(AST_T*) * (argc + 1));
-            function_arguments[argc++] = arg_ast;
+        function_arguments = realloc(function_arguments, sizeof(AST_T*) * (argc + 1));
+        function_arguments[argc++] = arg;
 
-            parser_eat(parser, TOKEN_STRING);
-
-            if (parser->current_token->type != TOKEN_RPAREN) {
-              diagnostic_error(parser->diagnostic, parser->current_token,"Erro de sintaxe");
-              exit(1); 
-            }
+        if (parser->current_token->type != TOKEN_RPAREN) {
+            diagnostic_error(parser->diagnostic, parser->current_token, "Erro de sintaxe");
+            exit(1);
         }
     }
 
@@ -301,17 +314,44 @@ AST_T* parser_parse_variable(parser_T* parser)
 
   parser_eat(parser, TOKEN_ID);
   
-  // caso o nosso token for um parenteses, vamos parsear como função
-  if (parser->current_token->type == TOKEN_RPAREN || strcmp(parser->current_token->value, "inicio") == 0)
+  if (parser->current_token->type == TOKEN_LPAREN)
   {
-    debugger_print(parser->debugger_instance, "parsing function, %s\n", parser->current_token->value);
-    return parser_parse_function_call(parser);
+    debugger_print(parser->debugger_instance, "parsing function call, %s\n", token_value);
+
+    parser_eat(parser, TOKEN_LPAREN);
+
+    AST_T** function_arguments = NULL;
+    size_t argc = 0;
+
+    while (parser->current_token->type != TOKEN_RPAREN &&
+           parser->current_token->type != TOKEN_END)
+    {
+        AST_T* arg = parser_parse_expr(parser);
+
+        function_arguments = realloc(function_arguments, sizeof(AST_T*) * (argc + 1));
+        function_arguments[argc++] = arg;
+
+        if (parser->current_token->type != TOKEN_RPAREN) {
+            diagnostic_error(parser->diagnostic, parser->current_token, "Erro de sintaxe");
+            exit(1);
+        }
+    }
+
+    parser_eat(parser, TOKEN_RPAREN);
+
+    AST_T* ast_function = init_ast(AST_FUNCTION_CALL);
+    ast_function->function_call_name = token_value;
+    ast_function->function_call_arguments = function_arguments;
+    ast_function->function_call_arguments_size = argc;
+
+    debugger_print(parser->debugger_instance, "Parsing da função %s acabou!", token_value);
+
+    return ast_function;
   }
   
   AST_T* ast_variable = init_ast(AST_VARIABLE);
   ast_variable->variable_name = token_value;
 
-  parser_eat(parser, TOKEN_ID);
   debugger_print(parser->debugger_instance, "done parsing ast_variable, %s\n", ast_variable->variable_name);
  
   return ast_variable;
@@ -326,4 +366,3 @@ AST_T* parser_parse_string(parser_T* parser)
   parser_eat(parser, TOKEN_STRING);
   return ast_string;
 }
-
