@@ -149,10 +149,6 @@ AST_T* parser_parse_programa(parser_T* parser)
     parser_eat(parser, TOKEN_PROGRAMA);
     parser_eat(parser, TOKEN_OPENINGBRACKET);
 
-    parser_parse_statements(parser);
-
-    parser_eat(parser, TOKEN_CLOSINGBRACKET);
-
     return parser_parse_entrypoint(parser);
 }
 

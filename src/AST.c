@@ -74,7 +74,17 @@ void ast_print(AST_T* ast) {
             printf("])");
             break;
 
-        default:
+
+        case AST_INICIO:
+
+       
+          printf("AST_INICIO(\n");
+          ast_print(ast->entryBody);
+          printf(")");
+          break;
+          
+
+    default:
             printf("AST_UNKNOWN");
             break;
     }
