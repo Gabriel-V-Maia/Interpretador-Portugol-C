@@ -54,7 +54,6 @@ char* lexer_get_current_char_as_string(lexer_T* lexer)
     return str;
 }
 
-// helper: estampa linha/coluna no token antes de retornar
 static token_T* stamp(lexer_T* lexer, token_T* token, int line, int col)
 {
     token->line   = line;
@@ -67,7 +66,7 @@ token_T* lexer_collect_string(lexer_T* lexer)
     int start_line = lexer->line;
     int start_col  = lexer->column;
 
-    lexer_advance(lexer); // pula a aspa de abertura
+    lexer_advance(lexer);
     char* value = calloc(1, sizeof(char));
     value[0] = '\0';
 
@@ -80,7 +79,7 @@ token_T* lexer_collect_string(lexer_T* lexer)
         lexer_advance(lexer);
     }
 
-    lexer_advance(lexer); // pula a aspa de fechamento
+    lexer_advance(lexer);
     return stamp(lexer, init_token(TOKEN_STRING, value), start_line, start_col);
 }
 
@@ -102,9 +101,29 @@ token_T* lexer_collect_id(lexer_T* lexer)
     }
 
     token_T* token;
-    if      (strcmp(value, "funcao")   == 0) token = init_token(TOKEN_FUNC,     value);
+    if (strcmp(value, "funcao") == 0)        token = init_token(TOKEN_FUNC,     value);
     else if (strcmp(value, "programa") == 0) token = init_token(TOKEN_PROGRAMA, value);
-    else                                     token = init_token(TOKEN_ID,        value);
+    else if (isdigit((unsigned char)value[0]) && lexer->currentChar == '.')
+    {
+        // consume the dot
+        value = realloc(value, strlen(value) + 2);
+        strcat(value, ".");
+        lexer_advance(lexer);
+
+        // consume the fractional digits
+        while (isdigit(lexer->currentChar))
+        {
+            char* s = lexer_get_current_char_as_string(lexer);
+            value = realloc(value, strlen(value) + strlen(s) + 1);
+            strcat(value, s);
+            free(s);
+            lexer_advance(lexer);
+        }
+
+        token = init_token(TOKEN_REAL, value);
+    }
+    else if (isdigit((unsigned char)value[0])) token = init_token(TOKEN_REAL, value);
+    else                                        token = init_token(TOKEN_ID,   value);
 
     debugger_print(lexer->debugger_instance, "Criado token %s com tipo %d", token->value, token->type);
     return stamp(lexer, token, start_line, start_col);
