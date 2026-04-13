@@ -289,12 +289,15 @@ static AST_T* parser_parse_id(parser_T* parser)
     if (isVarType(parser->current_token->value))
         return parser_parse_variable_definition(parser);
 
-    char* name = parser->current_token->value;
+    token_T* id_token = parser->current_token; 
+    char* name = id_token->value;
+
     parser_eat(parser, TOKEN_ID);
 
     if (parser->current_token->type == TOKEN_EQUALS) {
         parser_eat(parser, TOKEN_EQUALS);
         AST_T* value = parser_parse_expr(parser);
+
         AST_T* node = init_ast(AST_ASSIGN);
         node->assign_varname = name;
         node->assign_value   = value;
@@ -303,18 +306,23 @@ static AST_T* parser_parse_id(parser_T* parser)
 
     if (parser->current_token->type == TOKEN_LPAREN) {
         parser_eat(parser, TOKEN_LPAREN);
+
         AST_T** args = NULL;
         size_t argc  = 0;
+
         while (parser->current_token->type != TOKEN_RPAREN &&
                parser->current_token->type != TOKEN_END)
         {
             AST_T* arg = parser_parse_expr(parser);
             args = realloc(args, sizeof(AST_T*) * (argc + 1));
             args[argc++] = arg;
+
             if (parser->current_token->type == TOKEN_VIRGULA)
                 parser_eat(parser, TOKEN_VIRGULA);
         }
+
         parser_eat(parser, TOKEN_RPAREN);
+
         AST_T* node = init_ast(AST_FUNCTION_CALL);
         node->function_call_name           = name;
         node->function_call_arguments      = args;
@@ -322,10 +330,11 @@ static AST_T* parser_parse_id(parser_T* parser)
         return node;
     }
 
-    AST_T* node = init_ast(AST_VARIABLE);
-    node->variable_name = name;
-    return node;
+    diagnostic_error(parser->diagnostic, id_token,
+        "identificador '%s' usado como statement inválido", name);
+    exit(1);
 }
+
 
 AST_T* parser_parse_statements(parser_T* parser);
 
