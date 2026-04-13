@@ -5,15 +5,47 @@
 #include <ctype.h>
 #include <stdio.h>
 
+typedef struct {
+    const char* word;
+    TokenType   type;
+} keyword_t;
+
+static keyword_t keywords[] = {
+    { "funcao",     TOKEN_FUNC      },
+    { "programa",   TOKEN_PROGRAMA  },
+    { "se",         TOKEN_SE        },
+    { "senao",      TOKEN_SENAO     },
+    { "enquanto",   TOKEN_ENQUANTO  },
+    { "para",       TOKEN_PARA      },
+    { "repita",     TOKEN_REPITA    },
+    { "ate",        TOKEN_ATE       },
+    { "retorne",    TOKEN_RETORNE   },
+    { "vetor",      TOKEN_VETOR     },
+    { "verdadeiro", TOKEN_BOOL      },
+    { "falso",      TOKEN_BOOL      },
+    { "e",          TOKEN_E         },
+    { "ou",         TOKEN_OU        },
+    { "nao",        TOKEN_NAO       },
+    { NULL, 0 }
+};
+
+static TokenType resolve_keyword(const char* value)
+{
+    for (int i = 0; keywords[i].word != NULL; i++)
+        if (strcmp(keywords[i].word, value) == 0)
+            return keywords[i].type;
+    return TOKEN_ID;
+}
+
 lexer_T* init_lexer(char* contents, Debugger* debugger_instance)
 {
     lexer_T* lexer = calloc(1, sizeof(struct LEXER_STRUCT));
-    lexer->contents      = contents;
-    lexer->contents_len  = strlen(contents); 
-    lexer->index         = 0;
-    lexer->currentChar   = contents[0];
-    lexer->line          = 1;
-    lexer->column = 1;
+    lexer->contents     = contents;
+    lexer->contents_len = strlen(contents);
+    lexer->index        = 0;
+    lexer->currentChar  = contents[0];
+    lexer->line         = 1;
+    lexer->column       = 1;
     lexer->debugger_instance = debugger_instance;
     return lexer;
 }
@@ -28,7 +60,6 @@ void lexer_advance(lexer_T* lexer)
         } else {
             lexer->column++;
         }
-
         lexer->index++;
         lexer->currentChar = lexer->contents[lexer->index];
     }
@@ -36,7 +67,7 @@ void lexer_advance(lexer_T* lexer)
 
 void lexer_skip_whitespace(lexer_T* lexer)
 {
-    while (lexer->currentChar == ' ' || lexer->currentChar == '\n')
+    while (isspace(lexer->currentChar))
         lexer_advance(lexer);
 }
 
@@ -54,7 +85,7 @@ char* lexer_get_current_char_as_string(lexer_T* lexer)
     return str;
 }
 
-static token_T* stamp(lexer_T* lexer, token_T* token, int line, int col)
+static token_T* stamp(token_T* token, int line, int col)
 {
     token->line   = line;
     token->column = col;
@@ -73,14 +104,14 @@ token_T* lexer_collect_string(lexer_T* lexer)
     while (lexer->currentChar != '"' && lexer->currentChar != '\0')
     {
         char* s = lexer_get_current_char_as_string(lexer);
-        value = realloc(value, (strlen(value) + strlen(s) + 1) * sizeof(char));
+        value = realloc(value, strlen(value) + strlen(s) + 1);
         strcat(value, s);
         free(s);
         lexer_advance(lexer);
     }
 
     lexer_advance(lexer);
-    return stamp(lexer, init_token(TOKEN_STRING, value), start_line, start_col);
+    return stamp(init_token(TOKEN_STRING, value), start_line, start_col);
 }
 
 token_T* lexer_collect_id(lexer_T* lexer)
@@ -91,42 +122,44 @@ token_T* lexer_collect_id(lexer_T* lexer)
     char* value = calloc(1, sizeof(char));
     value[0] = '\0';
 
-    while (isalnum(lexer->currentChar))
+    while (isalnum(lexer->currentChar) || lexer->currentChar == '_')
     {
         char* s = lexer_get_current_char_as_string(lexer);
-        value = realloc(value, (strlen(value) + strlen(s) + 1) * sizeof(char));
+        value = realloc(value, strlen(value) + strlen(s) + 1);
         strcat(value, s);
         free(s);
         lexer_advance(lexer);
     }
 
     token_T* token;
-    if (strcmp(value, "funcao") == 0)        token = init_token(TOKEN_FUNC,     value);
-    else if (strcmp(value, "programa") == 0) token = init_token(TOKEN_PROGRAMA, value);
-    else if (isdigit((unsigned char)value[0]) && lexer->currentChar == '.')
+
+    if (isdigit((unsigned char)value[0]))
     {
-        // consume the dot
-        value = realloc(value, strlen(value) + 2);
-        strcat(value, ".");
-        lexer_advance(lexer);
-
-        // consume the fractional digits
-        while (isdigit(lexer->currentChar))
+        if (lexer->currentChar == '.')
         {
-            char* s = lexer_get_current_char_as_string(lexer);
-            value = realloc(value, strlen(value) + strlen(s) + 1);
-            strcat(value, s);
-            free(s);
+            value = realloc(value, strlen(value) + 2);
+            strcat(value, ".");
             lexer_advance(lexer);
-        }
 
+            while (isdigit(lexer->currentChar))
+            {
+                char* s = lexer_get_current_char_as_string(lexer);
+                value = realloc(value, strlen(value) + strlen(s) + 1);
+                strcat(value, s);
+                free(s);
+                lexer_advance(lexer);
+            }
+        }
         token = init_token(TOKEN_REAL, value);
     }
-    else if (isdigit((unsigned char)value[0])) token = init_token(TOKEN_REAL, value);
-    else                                        token = init_token(TOKEN_ID,   value);
+    else
+    {
+        TokenType type = resolve_keyword(value);
+        token = init_token(type, value);
+    }
 
     debugger_print(lexer->debugger_instance, "Criado token %s com tipo %d", token->value, token->type);
-    return stamp(lexer, token, start_line, start_col);
+    return stamp(token, start_line, start_col);
 }
 
 token_T* lexer_get_next_token(lexer_T* lexer)
@@ -141,7 +174,7 @@ token_T* lexer_get_next_token(lexer_T* lexer)
         int line = lexer->line;
         int col  = lexer->column;
 
-        if (isalnum(lexer->currentChar))
+        if (isalnum(lexer->currentChar) || lexer->currentChar == '_')
             return lexer_collect_id(lexer);
 
         if (lexer->currentChar == '"')
@@ -149,15 +182,51 @@ token_T* lexer_get_next_token(lexer_T* lexer)
 
         switch (lexer->currentChar)
         {
-            case '=': return stamp(lexer, lexer_advance_with_token(lexer, init_token(TOKEN_EQUALS,         lexer_get_current_char_as_string(lexer))), line, col);
-            case '{': return stamp(lexer, lexer_advance_with_token(lexer, init_token(TOKEN_OPENINGBRACKET, lexer_get_current_char_as_string(lexer))), line, col);
-            case '}': return stamp(lexer, lexer_advance_with_token(lexer, init_token(TOKEN_CLOSINGBRACKET, lexer_get_current_char_as_string(lexer))), line, col);
-            case '(': return stamp(lexer, lexer_advance_with_token(lexer, init_token(TOKEN_LPAREN,         lexer_get_current_char_as_string(lexer))), line, col);
-            case ')': return stamp(lexer, lexer_advance_with_token(lexer, init_token(TOKEN_RPAREN,         lexer_get_current_char_as_string(lexer))), line, col);
+        case '=':
+            lexer_advance(lexer);
+            if (lexer->currentChar == '=') {
+                lexer_advance(lexer);
+                return stamp(init_token(TOKEN_IGUAL,    "=="), line, col);
+            }
+            return stamp(init_token(TOKEN_EQUALS, "="), line, col);
+
+        case '!':
+            lexer_advance(lexer);
+            if (lexer->currentChar == '=') {
+                lexer_advance(lexer);
+                return stamp(init_token(TOKEN_DIFERENTE, "!="), line, col);
+            }
+            break;
+
+        case '>':
+            lexer_advance(lexer);
+            if (lexer->currentChar == '=') {
+                lexer_advance(lexer);
+                return stamp(init_token(TOKEN_MAIOR_EQ, ">="), line, col);
+            }
+            return stamp(init_token(TOKEN_MAIOR, ">"), line, col);
+
+        case '<':
+            lexer_advance(lexer);
+            if (lexer->currentChar == '=') {
+                lexer_advance(lexer);
+                return stamp(init_token(TOKEN_MENOR_EQ, "<="), line, col);
+            }
+            return stamp(init_token(TOKEN_MENOR, "<"), line, col);
+
+        case '+': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_MAIS,           "+")), line, col);
+        case '-': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_MENOS,          "-")), line, col);
+        case '*': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_MULT,           "*")), line, col);
+        case '/': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_DIV,            "/")), line, col);
+        case '{': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_OPENINGBRACKET, "{")), line, col);
+        case '}': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_CLOSINGBRACKET, "}")), line, col);
+        case '(': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_LPAREN,         "(")), line, col);
+        case ')': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_RPAREN,         ")")), line, col);
+        case ',': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_VIRGULA,        ",")), line, col);
         }
 
         lexer_advance(lexer);
     }
 
-    return NULL;
+    return stamp(init_token(TOKEN_END, "\0"), lexer->line, lexer->column);
 }
