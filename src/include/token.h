@@ -1,30 +1,52 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-
 typedef enum {
-    TOKEN_ID,// 0
-    TOKEN_FUNC,// 1
-    TOKEN_ENTRY, // 2
-    TOKEN_END, // 3
-    TOKEN_PROGRAMA, // 4
-    TOKEN_EQUALS, // 5
-    TOKEN_STRING, // 6
+    TOKEN_ID,
+    TOKEN_FUNC,
+    TOKEN_ENTRY,
+    TOKEN_END,
+    TOKEN_PROGRAMA,
+    TOKEN_EQUALS,
+    TOKEN_STRING,
     TOKEN_REAL,
-    TOKEN_LPAREN, // 7
-    TOKEN_RPAREN, // 8
-    TOKEN_OPENINGBRACKET, // 9
-    TOKEN_CLOSINGBRACKET // 10
+    TOKEN_LPAREN,
+    TOKEN_RPAREN,
+    TOKEN_OPENINGBRACKET,
+    TOKEN_CLOSINGBRACKET,
+    TOKEN_SE,
+    TOKEN_SENAO,
+    TOKEN_ENQUANTO,
+    TOKEN_PARA,
+    TOKEN_REPITA,
+    TOKEN_ATE,
+    TOKEN_RETORNE,
+    TOKEN_VETOR,
+    TOKEN_BOOL,
+    TOKEN_E,
+    TOKEN_OU,
+    TOKEN_NAO,
+    TOKEN_MAIOR,
+    TOKEN_MENOR,
+    TOKEN_MAIOR_EQ,
+    TOKEN_MENOR_EQ,
+    TOKEN_DIFERENTE,
+    TOKEN_IGUAL,
+    TOKEN_MAIS,
+    TOKEN_MENOS,
+    TOKEN_MULT,
+    TOKEN_DIV,
+    TOKEN_VIRGULA
 } TokenType;
 
-typedef struct TOKEN_STRUCT 
+typedef struct TOKEN_STRUCT
 {
     TokenType type;
-    char *value;
+    char* value;
     int line;
     int column;
 } token_T;
 
 token_T* init_token(TokenType type, char* value);
 
-#endif // !TOKEN_H
+#endif
