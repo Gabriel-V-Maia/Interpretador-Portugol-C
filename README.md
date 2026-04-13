@@ -29,6 +29,7 @@ Materiais usados durante o desenvolvimento:
 
 - [x] Lexer
 - [x] Parser (em andamento)
+- [ ] Preprocessor
 - [ ] Visitor
 - [x] Leitura de arquivos
 - [x] Definição de funções (em andamento)
