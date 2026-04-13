@@ -58,6 +58,7 @@ AST_T* parser_parse_variable_definition(parser_T* parser)
                    variable_definition->variable_definition_varname,
                    variable_definition->variable_definition_value->string_value,
                    variable_definition->type);
+     break;
 
   default:
      debugger_print(parser->debugger_instance,
@@ -205,6 +206,12 @@ AST_T* parser_parse_statements(parser_T* parser)
 
 AST_T* parser_parse_expr(parser_T* parser)
 {
+debugger_print(parser->debugger_instance,
+    "parse_expr: token type=%d value='%s'",
+    parser->current_token->type,
+    parser->current_token->value);
+
+    
   switch(parser->current_token->type)
   {
     case TOKEN_STRING: return parser_parse_string(parser);
