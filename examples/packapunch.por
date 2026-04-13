@@ -70,7 +70,7 @@ programa {
     matematica()
 
     escreva("=== Retorne ===")
-    retorne()
+    retorneValor()
   }
 
   funcao cumprimento() {
@@ -87,7 +87,7 @@ programa {
     escreva(resultado)
   }
 
-  funcao retorne() {
+  funcao retorneValor() {
     inteiro n = 0
     enquanto (n < 10) {
       n = n + 1
