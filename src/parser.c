@@ -161,11 +161,7 @@ AST_T* parser_parse_programa(parser_T* parser)
     }
 
     parser_eat(parser, TOKEN_CLOSINGBRACKET);
-
-    AST_T* node = init_ast(AST_PROGRAMA);
-    node->body = programa;
-
-    return node;
+    return programa;
 }
 
 AST_T* parser_parse(parser_T* parser)
