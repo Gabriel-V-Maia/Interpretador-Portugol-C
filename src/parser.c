@@ -115,34 +115,28 @@ void parser_eat(parser_T* parser, TokenType token_type)
     }
 }
 
-AST_T* parser_parse_entrypoint(parser_T* parser)
+AST_T* parser_parse_function_def(parser_T* parser)
 {
     parser_eat(parser, TOKEN_FUNC);
 
-    char* function_name = parser->current_token->value;
+    char* name = parser->current_token->value;
     parser_eat(parser, TOKEN_ID);
-
-    if (strcmp(function_name, "inicio") != 0)
-    {
-        printf("Erro: nome da função principal deve ser 'inicio', encontrado '%s'\n", function_name);
-        exit(1);
-    }
 
     parser_eat(parser, TOKEN_LPAREN);
     parser_eat(parser, TOKEN_RPAREN);
-
     parser_eat(parser, TOKEN_OPENINGBRACKET);
 
-    AST_T* entryPoint_Body = parser_parse_statements(parser);
+    AST_T* body = parser_parse_statements(parser);
 
     parser_eat(parser, TOKEN_CLOSINGBRACKET);
 
-    AST_T* entrypoint_node = init_ast(AST_INICIO);
-    entrypoint_node->entryBody = entryPoint_Body;
+    AST_T* node = init_ast(AST_FUNCTION_DEF);
+    node->function_def_name = name;
+    node->function_def_body = body;
 
-    debugger_print(parser->debugger_instance, "Retornando node entrypoint");
-    
-    return entrypoint_node;
+    debugger_print(parser->debugger_instance, "Parseando funcao: %s", name);
+
+    return node;
 }
 
 AST_T* parser_parse_programa(parser_T* parser)
@@ -150,7 +144,28 @@ AST_T* parser_parse_programa(parser_T* parser)
     parser_eat(parser, TOKEN_PROGRAMA);
     parser_eat(parser, TOKEN_OPENINGBRACKET);
 
-    return parser_parse_entrypoint(parser);
+    AST_T* programa = init_ast(AST_PROGRAMA);
+    programa->compound_value = calloc(1, sizeof(AST_T*));
+    programa->compound_size  = 0;
+
+    while (parser->current_token->type != TOKEN_CLOSINGBRACKET &&
+           parser->current_token->type != TOKEN_END)
+    {
+        AST_T* func = parser_parse_function_def(parser);
+        programa->compound_size++;
+        programa->compound_value = realloc(
+            programa->compound_value,
+            programa->compound_size * sizeof(AST_T*)
+        );
+        programa->compound_value[programa->compound_size - 1] = func;
+    }
+
+    parser_eat(parser, TOKEN_CLOSINGBRACKET);
+
+    AST_T* node = init_ast(AST_PROGRAMA);
+    node->body = programa;
+
+    return node;
 }
 
 AST_T* parser_parse(parser_T* parser)
@@ -165,17 +180,15 @@ AST_T* parser_parse(parser_T* parser)
 
 AST_T* parser_parse_statement(parser_T* parser)
 {
-  switch (parser->current_token->type) 
-  {
+    switch (parser->current_token->type)
+    {
     case TOKEN_ID: return parser_parse_id(parser);
-    case TOKEN_FUNC: return parser_parse_entrypoint(parser);
     default:
-      diagnostic_error(parser->diagnostic, parser->current_token, "Declaração inesperada com '%s'", parser->current_token->value);
-      exit(1);
-
-  }
+        diagnostic_error(parser->diagnostic, parser->current_token,
+            "Declaração inesperada com '%s'", parser->current_token->value);
+        exit(1);
+    }
 }
-
 
 AST_T* parser_parse_statements(parser_T* parser)
 {
