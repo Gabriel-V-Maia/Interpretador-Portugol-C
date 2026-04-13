@@ -67,9 +67,13 @@ void ast_print(AST_T* ast)
         printf(")");
         break;
     case AST_PROGRAMA:
-        printf("AST_PROGRAMA(\n");
-        ast_print(ast->body);
-        printf(")");
+        printf("AST_PROGRAMA([\n");
+        for (size_t i = 0; i < ast->compound_size; i++) {
+            printf("  ");
+            ast_print(ast->compound_value[i]);
+            printf("\n");
+        }
+        printf("])");
         break;
     default:
         printf("AST_UNKNOWN(%d)", ast->type);
