@@ -5,93 +5,74 @@ AST_T* init_ast(int type)
 {
     AST_T* ast = calloc(1, sizeof(AST_T));
     ast->type = type;
-
-    /* AST_VARIABLE_DEFINITION */
     ast->variable_definition_varname = NULL;
     ast->variable_definition_value = NULL;
-
-    /* AST_VARIABLE */
     ast->variable_name = NULL;
-
-    /* AST_FUNCTION_CALL */
     ast->function_call_name = NULL;
     ast->function_call_arguments = NULL;
     ast->function_call_arguments_size = 0;
-
-    /* AST_STRING */
     ast->string_value = NULL;
-
-    /* AST_REAL */ 
-
     ast->real_value = NULL;
-
-    /* AST_COMPOUND */
     ast->compound_value = NULL;
     ast->compound_size = 0;
-
-
+    ast->function_def_name = NULL;
+    ast->function_def_body = NULL;
     return ast;
 }
 
-void ast_print(AST_T* ast) {
-    if (!ast) {
-        printf("NULL");
-        return;
-    }
+void ast_print(AST_T* ast)
+{
+    if (!ast) { printf("NULL"); return; }
 
     switch (ast->type) {
-        case AST_VARIABLE_DEFINITION:
-            printf("AST_VARIABLE_DEFINITION(varname: %s, value: ", ast->variable_definition_varname);
-            ast_print(ast->variable_definition_value);
-            printf(")");
-            break;
-
-        case AST_VARIABLE:
-            printf("AST_VARIABLE(name: %s)", ast->variable_name);
-            break;
-
-        case AST_STRING:
-            printf("AST_STRING(value: \"%s\")", ast->string_value);
-            break;
-
-        case AST_FUNCTION_CALL:
-            printf("AST_FUNCTION_CALL(name: %s, args: [", ast->function_call_name);
-            for (size_t i = 0; i < ast->function_call_arguments_size; i++) {
-                ast_print(ast->function_call_arguments[i]);
-                if (i + 1 < ast->function_call_arguments_size)
-                    printf(", ");
-            }
-            printf("])");
-            break;
-
-        case AST_COMPOUND:
-            printf("AST_COMPOUND([\n");
-            for (size_t i = 0; i < ast->compound_size; i++) {
-                printf("  ");
-                ast_print(ast->compound_value[i]);
-                printf("\n");
-            }
-            printf("])");
-            break;
-
-
-        case AST_INICIO:
-
-       
-          printf("AST_INICIO(\n");
-          ast_print(ast->entryBody);
-          printf(")");
-          break;
-
-        
+    case AST_VARIABLE_DEFINITION:
+        printf("AST_VARIABLE_DEFINITION(varname: %s, value: ", ast->variable_definition_varname);
+        ast_print(ast->variable_definition_value);
+        printf(")");
+        break;
+    case AST_VARIABLE:
+        printf("AST_VARIABLE(name: %s)", ast->variable_name);
+        break;
+    case AST_STRING:
+        printf("AST_STRING(value: \"%s\")", ast->string_value);
+        break;
     case AST_REAL:
         printf("AST_REAL(value: %s)", ast->real_value);
         break;
-          
-
+    case AST_FUNCTION_CALL:
+        printf("AST_FUNCTION_CALL(name: %s, args: [", ast->function_call_name);
+        for (size_t i = 0; i < ast->function_call_arguments_size; i++) {
+            ast_print(ast->function_call_arguments[i]);
+            if (i + 1 < ast->function_call_arguments_size) printf(", ");
+        }
+        printf("])");
+        break;
+    case AST_FUNCTION_DEF:
+        printf("AST_FUNCTION_DEF(name: %s, body: \n", ast->function_def_name);
+        ast_print(ast->function_def_body);
+        printf(")");
+        break;
+    case AST_COMPOUND:
+        printf("AST_COMPOUND([\n");
+        for (size_t i = 0; i < ast->compound_size; i++) {
+            printf("  ");
+            ast_print(ast->compound_value[i]);
+            printf("\n");
+        }
+        printf("])");
+        break;
+    case AST_INICIO:
+        printf("AST_INICIO(\n");
+        ast_print(ast->entryBody);
+        printf(")");
+        break;
+    case AST_PROGRAMA:
+        printf("AST_PROGRAMA(\n");
+        ast_print(ast->body);
+        printf(")");
+        break;
     default:
-            printf("AST_UNKNOWN");
-            break;
+        printf("AST_UNKNOWN(%d)", ast->type);
+        break;
     }
 }
-
