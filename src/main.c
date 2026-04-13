@@ -67,8 +67,10 @@ int main(int argc, char *argv[]) {
   AST_T*    root   = parser_parse(parser);
 
   free(source);
-  ast_print(root);
-  printf("\n");
+  if (debug) {
+      ast_print(root);
+      printf("\n");
+  }
 
   return 0;
 }
