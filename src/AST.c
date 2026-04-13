@@ -82,6 +82,11 @@ void ast_print(AST_T* ast) {
           ast_print(ast->entryBody);
           printf(")");
           break;
+
+        
+    case AST_REAL:
+        printf("AST_REAL(value: %s)", ast->real_value);
+        break;
           
 
     default:
