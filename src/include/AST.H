@@ -20,7 +20,8 @@ typedef struct AST_STRUCT
     AST_PARA,
     AST_REPITA,
     AST_RETORNE,
-    AST_BOOL
+    AST_BOOL,
+    AST_ASSIGN
   } type;
 
   /* AST_VARIABLE_DEFINITION */
@@ -89,6 +90,10 @@ typedef struct AST_STRUCT
 
   /* AST_RETORNE */
   struct AST_STRUCT* retorne_value;
+
+  /* AST_ASSIGN */
+  char* assign_varname;
+  struct AST_STRUCT* assign_value;
 } AST_T;
 AST_T* init_ast(int type);
 void ast_print(AST_T* ast);
