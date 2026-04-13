@@ -1,7 +1,6 @@
 #ifndef AST_H
 #define AST_H
 #include <stdlib.h>
-
 typedef struct AST_STRUCT
 {
   enum {
@@ -13,34 +12,84 @@ typedef struct AST_STRUCT
     AST_COMPOUND,
     AST_PROGRAMA,
     AST_INICIO,
-    AST_FUNCTION_DEF
+    AST_FUNCTION_DEF,
+    AST_BINOP,
+    AST_UNOP,
+    AST_SE,
+    AST_ENQUANTO,
+    AST_PARA,
+    AST_REPITA,
+    AST_RETORNE,
+    AST_BOOL
   } type;
-  /* AST_VARIABLE_DEFINITION */ 
+
+  /* AST_VARIABLE_DEFINITION */
   char* variable_definition_varname;
   struct AST_STRUCT* variable_definition_value;
+  char* variable_definition_type;
+
   /* AST_VARIABLE */
   char* variable_name;
-  /* AST_FUNCTION_CALL */ 
+
+  /* AST_FUNCTION_CALL */
   char* function_call_name;
   struct AST_STRUCT** function_call_arguments;
   size_t function_call_arguments_size;
+
   /* AST_STRING */
   char* string_value;
+
   /* AST_REAL */
   char* real_value;
+
+  /* AST_BOOL */
+  int bool_value;
+
   /* AST_COMPOUND */
   struct AST_STRUCT** compound_value;
   size_t compound_size;
-  /* AST_PROGRAMA */  
+
+  /* AST_PROGRAMA */
   struct AST_STRUCT* body;
-  /* AST_INICIO */  
+
+  /* AST_INICIO */
   struct AST_STRUCT* entryBody;
+
   /* AST_FUNCTION_DEF */
   char* function_def_name;
   struct AST_STRUCT* function_def_body;
-} AST_T;
 
+  /* AST_BINOP */
+  struct AST_STRUCT* binop_left;
+  int binop_op;
+  struct AST_STRUCT* binop_right;
+
+  /* AST_UNOP */
+  int unop_op;
+  struct AST_STRUCT* unop_operand;
+
+  /* AST_SE */
+  struct AST_STRUCT* se_condition;
+  struct AST_STRUCT* se_then;
+  struct AST_STRUCT* se_else;
+
+  /* AST_ENQUANTO */
+  struct AST_STRUCT* enquanto_condition;
+  struct AST_STRUCT* enquanto_body;
+
+  /* AST_PARA */
+  struct AST_STRUCT* para_var;
+  struct AST_STRUCT* para_from;
+  struct AST_STRUCT* para_to;
+  struct AST_STRUCT* para_body;
+
+  /* AST_REPITA */
+  struct AST_STRUCT* repita_body;
+  struct AST_STRUCT* repita_condition;
+
+  /* AST_RETORNE */
+  struct AST_STRUCT* retorne_value;
+} AST_T;
 AST_T* init_ast(int type);
 void ast_print(AST_T* ast);
-
 #endif
