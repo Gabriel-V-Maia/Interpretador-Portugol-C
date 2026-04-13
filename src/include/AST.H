@@ -78,7 +78,7 @@ typedef struct AST_STRUCT
   struct AST_STRUCT* enquanto_body;
 
   /* AST_PARA */
-  struct AST_STRUCT* para_var;
+  char* para_var;
   struct AST_STRUCT* para_from;
   struct AST_STRUCT* para_to;
   struct AST_STRUCT* para_body;
