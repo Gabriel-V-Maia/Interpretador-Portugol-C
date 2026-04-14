@@ -1,8 +1,17 @@
 # Interpretador-Portugol
 
-Interpretador de **Portugol** escrito em **C**, transpilando para C e compilando para um executável nativo. A sintaxe é baseada no [Portugol-Webstudio](https://github.com/dgadelha/Portugol-Webstudio).
+<p align="center">
+  <img src="https://img.shields.io/badge/linguagem-C-blue?style=for-the-badge&logo=c">
+  <img src="https://img.shields.io/badge/status-em%20desenvolvimento-yellow?style=for-the-badge">
+  <img src="https://img.shields.io/badge/licença-MIT-green?style=for-the-badge">
+  <img src="https://img.shields.io/badge/plataforma-Linux%20%7C%20Windows-lightgrey?style=for-the-badge">
+</p>
 
-> Projeto em desenvolvimento ativo. Feedbacks e contribuições são bem-vindos.
+<p align="center">
+  Compilador de <strong>Portugol</strong> escrito em <strong>C</strong>, transpilando para C e compilando para um executável nativo.
+  <br>
+  Sintaxe baseada no <a href="https://github.com/dgadelha/Portugol-Webstudio">Portugol-Webstudio</a>.
+</p>
 
 ---
 
@@ -24,7 +33,6 @@ graph TD
     K --> L[.c file]
     L --> M[GCC]
     M --> N[.exe]
-
     style A fill:#4a90d9,color:#fff
     style E fill:#4a90d9,color:#fff
     style J fill:#27ae60,color:#fff
@@ -35,18 +43,22 @@ graph TD
 ---
 
 ## Exemplo
-```
+
+```portugol
 programa {
+  importar "std/net.por"
+
   funcao inicio() {
     cadeia nome = "Maria Silva"
     inteiro idade = 28
     logico estudante = verdadeiro
+
     se (estudante e idade < 30) {
       escreva("jovem estudante")
     } senao {
       escreva("nao e estudante jovem")
     }
-  
+
     para i = 0 ate 5 {
       escreva(i)
     }
@@ -63,8 +75,8 @@ programa {
 | Lexer | Concluído |
 | Parser | Em andamento |
 | Preprocessor (`importar`) | Pendente |
-| Codegen (transpile para C) |  Pendente |
-| Visitor |  Pendente |
+| Codegen (transpile para C) | Pendente |
+| Visitor | Pendente |
 | Definição de funções | Em andamento |
 | Chamada de funções | Pendente |
 | Argumentos em funções | Em andamento |
@@ -76,11 +88,33 @@ programa {
 ## Uso
 
 ```bash
-# rodar normalmente
-./portugol arquivo.por
+# compilar o projeto
+make
 
-# rodar com debug (imprime a AST e logs de debug)
-./portugol -d arquivo.por
+# rodar normalmente
+./build/portugol arquivo.por
+
+# rodar com debug (imprime a AST e logs internos)
+./build/portugol -d arquivo.por
+```
+
+---
+
+## Estrutura do Projeto
+
+```
+.
+├── src/
+│   ├── include/        # headers
+│   ├── diagnostics/    # erros com linha e coluna
+│   ├── debugger/       # logs de debug
+│   ├── lexer.c
+│   ├── parser.c
+│   ├── AST.c
+│   └── main.c
+├── examples/           # arquivos .por de exemplo
+├── Makefile
+└── README.md
 ```
 
 ---
