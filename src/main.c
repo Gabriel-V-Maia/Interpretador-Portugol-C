@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
   codegen_emit(cg, root);
   fclose(cg->output);
 
-  codegen_compile("portugol_codegen/output.c", "portugol_codegen/output");
+  codegen_compile("build/output.c", "build/output");
 
   
   if (debug) {
