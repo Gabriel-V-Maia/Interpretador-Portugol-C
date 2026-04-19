@@ -13,6 +13,7 @@
 #include "preprocessor/preprocessor.h"
 #include "diagnostics/diagnostics.h"
 #include "debugger/debugger.h"
+#include "codegen/codegen.h"
 
 static char* read_file(const char* filepath)
 {
@@ -72,6 +73,14 @@ int main(int argc, char *argv[]) {
   Debugger preDebugger = make_debugger("preprocessor", debug);
   preprocessor_T* pre = init_preprocessor(diag, &preDebugger);
   root = preprocessor_run(pre, root);
+
+  Debugger codegenDebugger = make_debugger("codegen", debug);
+  codegen_T* cg = init_codegen("build/output.c", &codegenDebugger);
+  codegen_emit(cg, root);
+  fclose(cg->output);
+
+  codegen_compile("portugol_codegen/output.c", "portugol_codegen/output");
+
   
   if (debug) {
       ast_print(root);
