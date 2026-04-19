@@ -18,26 +18,14 @@
 ## Pipeline
 
 ```mermaid
-graph TD
-    A[main .por file] --> B[Lexer]
-    B --> C[Parser]
-    C --> D{importar found?}
-    D -- yes --> E[imported .por file]
-    E --> F[Lexer]
-    F --> G[Parser]
-    G --> H[imported AST]
-    H --> I[inject into main AST]
-    I --> D
-    D -- no --> J[merged AST]
-    J --> K[Codegen]
-    K --> L[.c file]
-    L --> M[GCC]
-    M --> N[.exe]
-    style A fill:#4a90d9,color:#fff
-    style E fill:#4a90d9,color:#fff
-    style J fill:#27ae60,color:#fff
-    style L fill:#e67e22,color:#fff
-    style N fill:#c0392b,color:#fff
+flowchart LR
+    A([main.por]) --> B[Lexer] --> C[Parser] --> D{importar?}
+
+    D -->|não| K
+    D -->|sim| E([importado.por]) --> F[Lexer] --> G[Parser] --> H[AST importada] --> I[Preprocessador]
+
+    C --> I
+    I --> K[AST final] --> L[Codegen] --> M([output.c]) --> N[GCC] --> O([.exe])
 ```
 
 ---
