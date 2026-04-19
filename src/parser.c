@@ -21,6 +21,7 @@ static AST_T* parser_parse_enquanto(parser_T* parser);
 static AST_T* parser_parse_para(parser_T* parser);
 static AST_T* parser_parse_repita(parser_T* parser);
 static AST_T* parser_parse_retorne(parser_T* parser);
+static AST_T* parser_parse_import(parser_T* parser);
 
 static statement_rule_t statement_rules[] = {
     { TOKEN_ID,       parser_parse_id       },
@@ -68,6 +69,18 @@ void parser_eat(parser_T* parser, TokenType token_type)
             parser->current_token->type,
             token_type);
     }
+}
+
+static AST_T* parser_parse_import(parser_T* parser)
+{
+    parser_eat(parser, TOKEN_IMPORTAR);
+
+    AST_T* node = init_ast(AST_IMPORT);
+    node->import_path = parser->current_token->value;
+    parser_eat(parser, TOKEN_STRING);
+
+    debugger_print(parser->debugger_instance, "importar: %s", node->import_path);
+    return node;
 }
 
 AST_T* parser_parse_string(parser_T* parser)
@@ -492,7 +505,6 @@ AST_T* parser_parse_function_def(parser_T* parser)
     debugger_print(parser->debugger_instance, "Parseando funcao: %s", name);
     return node;
 }
-
 AST_T* parser_parse_programa(parser_T* parser)
 {
     parser_eat(parser, TOKEN_PROGRAMA);
@@ -505,13 +517,25 @@ AST_T* parser_parse_programa(parser_T* parser)
     while (parser->current_token->type != TOKEN_CLOSINGBRACKET &&
            parser->current_token->type != TOKEN_END)
     {
-        AST_T* func = parser_parse_function_def(parser);
+        AST_T* node = NULL;
+
+        if (parser->current_token->type == TOKEN_IMPORTAR)
+            node = parser_parse_import(parser);
+        else if (parser->current_token->type == TOKEN_FUNC)
+            node = parser_parse_function_def(parser);
+        else {
+            diagnostic_error(parser->diagnostic, parser->current_token,
+                "esperava 'importar' ou 'funcao', encontrado '%s'",
+                parser->current_token->value);
+            exit(1);
+        }
+
         programa->compound_size++;
         programa->compound_value = realloc(
             programa->compound_value,
             programa->compound_size * sizeof(AST_T*)
         );
-        programa->compound_value[programa->compound_size - 1] = func;
+        programa->compound_value[programa->compound_size - 1] = node;
     }
 
     parser_eat(parser, TOKEN_CLOSINGBRACKET);

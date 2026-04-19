@@ -155,8 +155,13 @@ void ast_print(AST_T* ast)
         ast_print(ast->retorne_value);
         printf(")");
         break;
+    case AST_IMPORT:
+      printf("AST_IMPORT(path: \"%s\")", ast->import_path);
+      break;
+
     default:
         printf("AST_UNKNOWN(%d)", ast->type);
         break;
+
     }
 }

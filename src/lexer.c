@@ -11,21 +11,22 @@ typedef struct {
 } keyword_t;
 
 static keyword_t keywords[] = {
-    { "funcao",     TOKEN_FUNC      },
-    { "programa",   TOKEN_PROGRAMA  },
-    { "se",         TOKEN_SE        },
-    { "senao",      TOKEN_SENAO     },
-    { "enquanto",   TOKEN_ENQUANTO  },
-    { "para",       TOKEN_PARA      },
-    { "repita",     TOKEN_REPITA    },
-    { "ate",        TOKEN_ATE       },
-    { "retorne",    TOKEN_RETORNE   },
-    { "vetor",      TOKEN_VETOR     },
-    { "verdadeiro", TOKEN_BOOL      },
-    { "falso",      TOKEN_BOOL      },
-    { "e",          TOKEN_E         },
-    { "ou",         TOKEN_OU        },
-    { "nao",        TOKEN_NAO       },
+    {"funcao", TOKEN_FUNC},
+    {"programa", TOKEN_PROGRAMA},
+    {"se", TOKEN_SE},
+    {"senao", TOKEN_SENAO},
+    {"enquanto", TOKEN_ENQUANTO},
+    {"para", TOKEN_PARA},
+    {"repita", TOKEN_REPITA},
+    {"ate", TOKEN_ATE},
+    {"retorne", TOKEN_RETORNE},
+    {"vetor", TOKEN_VETOR},
+    {"verdadeiro", TOKEN_BOOL},
+    {"falso", TOKEN_BOOL},
+    {"e", TOKEN_E},
+    {"ou", TOKEN_OU},
+    {"nao", TOKEN_NAO},
+    {"importar", TOKEN_IMPORTAR},
     { NULL, 0 }
 };
 

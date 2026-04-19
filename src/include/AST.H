@@ -21,7 +21,8 @@ typedef struct AST_STRUCT
     AST_REPITA,
     AST_RETORNE,
     AST_BOOL,
-    AST_ASSIGN
+    AST_ASSIGN,
+    AST_IMPORT
   } type;
 
   /* AST_VARIABLE_DEFINITION */
@@ -94,6 +95,10 @@ typedef struct AST_STRUCT
   /* AST_ASSIGN */
   char* assign_varname;
   struct AST_STRUCT* assign_value;
+
+  /* AST_IMPORTAR */
+  char* import_path;
+
 } AST_T;
 AST_T* init_ast(int type);
 void ast_print(AST_T* ast);

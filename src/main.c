@@ -10,6 +10,7 @@
 #include "include/parser.h"
 #include "include/AST.H"
 #include "helpers/operations.h"
+#include "preprocessor/preprocessor.h"
 #include "diagnostics/diagnostics.h"
 #include "debugger/debugger.h"
 
@@ -65,8 +66,13 @@ int main(int argc, char *argv[]) {
   parser_T *parser = init_parser(lexer, diag, &parserDebugger);
   
   AST_T*    root   = parser_parse(parser);
-
   free(source);
+
+  
+  Debugger preDebugger = make_debugger("preprocessor", debug);
+  preprocessor_T* pre = init_preprocessor(diag, &preDebugger);
+  root = preprocessor_run(pre, root);
+  
   if (debug) {
       ast_print(root);
       printf("\n");

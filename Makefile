@@ -3,7 +3,12 @@ EXEC      = build/portugol.out
 SRC_DIR   = src
 BUILD_DIR = build
 
-SOURCES   = $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/helpers/*.c) $(wildcard $(SRC_DIR)/diagnostics/*.c) $(wildcard $(SRC_DIR)/debugger/*.c)
+SOURCES = $(wildcard $(SRC_DIR)/*.c) \
+          $(wildcard $(SRC_DIR)/helpers/*.c) \
+          $(wildcard $(SRC_DIR)/diagnostics/*.c) \
+          $(wildcard $(SRC_DIR)/debugger/*.c) \
+          $(wildcard $(SRC_DIR)/preprocessor/*.c)
+
 OBJECTS   = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SOURCES))
 
 CFLAGS    = -g -Wall -Wextra -I$(SRC_DIR)/include
