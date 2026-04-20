@@ -87,5 +87,9 @@ int main(int argc, char *argv[]) {
       printf("\n");
   }
 
+  int executed = system("./build/output");
+  if (executed == -1)
+    PANIC("Couldn't execute the outputted file");
+  
   return 0;
 }
