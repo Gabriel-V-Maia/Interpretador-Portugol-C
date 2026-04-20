@@ -1,1 +1,1 @@
-programa {   funcao inicio() {     cadeia nome = "Maria"     escreva("olá ${nome}!")   } }
+programa {   funcao inicio() {     cadeia nome = "Maria"     escreva("olá ${nome}!\n")   } }
