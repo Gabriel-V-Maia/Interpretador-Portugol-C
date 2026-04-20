@@ -10,6 +10,7 @@ static void emit_compound(codegen_T* cg, AST_T* ast);
 static void emit_variable_definition(codegen_T* cg, AST_T* ast);
 static void emit_assign(codegen_T* cg, AST_T* ast);
 static void emit_function_call(codegen_T* cg, AST_T* ast);
+static void emit_string_interp(codegen_T* cg, AST_T* ast);
 static void emit_se(codegen_T* cg, AST_T* ast);
 static void emit_enquanto(codegen_T* cg, AST_T* ast);
 static void emit_para(codegen_T* cg, AST_T* ast);
@@ -18,7 +19,6 @@ static void emit_retorne(codegen_T* cg, AST_T* ast);
 static void emit_binop(codegen_T* cg, AST_T* ast);
 static void emit_unop(codegen_T* cg, AST_T* ast);
 static void emit_string(codegen_T* cg, AST_T* ast);
-static void emit_string_interp(codegen_T* cg, AST_T* ast);
 static void emit_real(codegen_T* cg, AST_T* ast);
 static void emit_bool(codegen_T* cg, AST_T* ast);
 static void emit_variable(codegen_T* cg, AST_T* ast);
@@ -49,6 +49,30 @@ static emit_rule_t emit_rules[] = {
     { AST_VARIABLE,            emit_variable            },
     { -1, NULL }
 };
+
+static void codegen_register_var(codegen_T* cg, const char* name, const char* type)
+{
+    if (cg->var_count >= CODEGEN_MAX_VARS) return;
+    cg->vars[cg->var_count].name = (char*)name;
+    cg->vars[cg->var_count].type = (char*)type;
+    cg->var_count++;
+}
+
+static const char* codegen_lookup_type(codegen_T* cg, const char* name)
+{
+    for (int i = 0; i < cg->var_count; i++)
+        if (strcmp(cg->vars[i].name, name) == 0)
+            return cg->vars[i].type;
+    return "cadeia";
+}
+
+static const char* type_to_format(const char* type)
+{
+    if (strcmp(type, "inteiro") == 0) return "%d";
+    if (strcmp(type, "real")    == 0) return "%f";
+    if (strcmp(type, "logico")  == 0) return "%d";
+    return "%s";
+}
 
 static const char* portugol_type_to_c(const char* type)
 {
@@ -91,6 +115,7 @@ codegen_T* init_codegen(const char* output_path, Debugger* debugger)
     codegen_T* cg = calloc(1, sizeof(codegen_T));
     cg->output    = fopen(output_path, "w");
     cg->debugger  = debugger;
+    cg->var_count = 0;
 
     if (!cg->output) {
         fprintf(stderr, "erro: nao foi possivel criar '%s'\n", output_path);
@@ -156,6 +181,7 @@ static void emit_compound(codegen_T* cg, AST_T* ast)
 static void emit_variable_definition(codegen_T* cg, AST_T* ast)
 {
     const char* ctype = portugol_type_to_c(ast->variable_definition_type);
+    codegen_register_var(cg, ast->variable_definition_varname, ast->variable_definition_type);
     fprintf(cg->output, "%s %s = ", ctype, ast->variable_definition_varname);
     codegen_emit(cg, ast->variable_definition_value);
     fprintf(cg->output, ";\n");
@@ -174,10 +200,12 @@ static void emit_string_interp(codegen_T* cg, AST_T* ast)
 
     for (size_t i = 0; i < ast->interp_size; i++) {
         AST_T* part = ast->interp_parts[i];
-        if (part->type == AST_STRING)
+        if (part->type == AST_STRING) {
             fprintf(cg->output, "%s", part->string_value);
-        else
-            fprintf(cg->output, "%%s");
+        } else {
+            const char* vtype = codegen_lookup_type(cg, part->variable_name);
+            fprintf(cg->output, "%s", type_to_format(vtype));
+        }
     }
 
     fprintf(cg->output, "\"");

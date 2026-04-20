@@ -5,9 +5,18 @@
 #include "../debugger/debugger.h"
 #include <stdio.h>
 
+#define CODEGEN_MAX_VARS 256
+
 typedef struct {
-    FILE*     output;
-    Debugger* debugger;
+    char* name;
+    char* type;
+} var_type_t;
+
+typedef struct {
+    FILE*      output;
+    Debugger*  debugger;
+    var_type_t vars[CODEGEN_MAX_VARS];
+    int        var_count;
 } codegen_T;
 
 typedef void (*emit_fn)(codegen_T*, AST_T*);
