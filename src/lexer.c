@@ -11,22 +11,22 @@ typedef struct {
 } keyword_t;
 
 static keyword_t keywords[] = {
-    {"funcao", TOKEN_FUNC},
-    {"programa", TOKEN_PROGRAMA},
-    {"se", TOKEN_SE},
-    {"senao", TOKEN_SENAO},
-    {"enquanto", TOKEN_ENQUANTO},
-    {"para", TOKEN_PARA},
-    {"repita", TOKEN_REPITA},
-    {"ate", TOKEN_ATE},
-    {"retorne", TOKEN_RETORNE},
-    {"vetor", TOKEN_VETOR},
-    {"verdadeiro", TOKEN_BOOL},
-    {"falso", TOKEN_BOOL},
-    {"e", TOKEN_E},
-    {"ou", TOKEN_OU},
-    {"nao", TOKEN_NAO},
-    {"importar", TOKEN_IMPORTAR},
+    {"funcao",     TOKEN_FUNC     },
+    {"programa",   TOKEN_PROGRAMA },
+    {"se",         TOKEN_SE       },
+    {"senao",      TOKEN_SENAO    },
+    {"enquanto",   TOKEN_ENQUANTO },
+    {"para",       TOKEN_PARA     },
+    {"repita",     TOKEN_REPITA   },
+    {"ate",        TOKEN_ATE      },
+    {"retorne",    TOKEN_RETORNE  },
+    {"vetor",      TOKEN_VETOR    },
+    {"verdadeiro", TOKEN_BOOL     },
+    {"falso",      TOKEN_BOOL     },
+    {"e",          TOKEN_E        },
+    {"ou",         TOKEN_OU       },
+    {"nao",        TOKEN_NAO      },
+    {"importar",   TOKEN_IMPORTAR },
     { NULL, 0 }
 };
 
@@ -41,13 +41,15 @@ static TokenType resolve_keyword(const char* value)
 lexer_T* init_lexer(char* contents, Debugger* debugger_instance)
 {
     lexer_T* lexer = calloc(1, sizeof(struct LEXER_STRUCT));
-    lexer->contents     = contents;
-    lexer->contents_len = strlen(contents);
-    lexer->index        = 0;
-    lexer->currentChar  = contents[0];
-    lexer->line         = 1;
-    lexer->column       = 1;
+    lexer->contents          = contents;
+    lexer->contents_len      = strlen(contents);
+    lexer->index             = 0;
+    lexer->currentChar       = contents[0];
+    lexer->line              = 1;
+    lexer->column            = 1;
     lexer->debugger_instance = debugger_instance;
+    lexer->interp_queue_size = 0;
+    lexer->interp_queue_pos  = 0;
     return lexer;
 }
 
@@ -98,12 +100,60 @@ token_T* lexer_collect_string(lexer_T* lexer)
     int start_line = lexer->line;
     int start_col  = lexer->column;
 
+    lexer->interp_queue_size = 0;
+    lexer->interp_queue_pos  = 0;
+
     lexer_advance(lexer);
+
     char* value = calloc(1, sizeof(char));
     value[0] = '\0';
 
     while (lexer->currentChar != '"' && lexer->currentChar != '\0')
     {
+        if (lexer->currentChar == '$')
+        {
+            lexer_advance(lexer);
+            if (lexer->currentChar == '{')
+            {
+                lexer_advance(lexer);
+
+                if (strlen(value) > 0) {
+                    lexer->interp_queue[lexer->interp_queue_size++] =
+                        stamp(init_token(TOKEN_STRING_PART, value), start_line, start_col);
+                    value = calloc(1, sizeof(char));
+                    value[0] = '\0';
+                }
+
+                char* expr = calloc(1, sizeof(char));
+                expr[0] = '\0';
+
+                while (lexer->currentChar != '}' && lexer->currentChar != '\0')
+                {
+                    char* s = lexer_get_current_char_as_string(lexer);
+                    expr = realloc(expr, strlen(expr) + strlen(s) + 1);
+                    strcat(expr, s);
+                    free(s);
+                    lexer_advance(lexer);
+                }
+
+                lexer_advance(lexer);
+                lexer->interp_queue[lexer->interp_queue_size++] =
+                    stamp(init_token(TOKEN_INTERP_EXPR, expr), start_line, start_col);
+                continue;
+            }
+            else
+            {
+                value = realloc(value, strlen(value) + 2);
+                strcat(value, "$");
+                char* s = lexer_get_current_char_as_string(lexer);
+                value = realloc(value, strlen(value) + strlen(s) + 1);
+                strcat(value, s);
+                free(s);
+                lexer_advance(lexer);
+                continue;
+            }
+        }
+
         char* s = lexer_get_current_char_as_string(lexer);
         value = realloc(value, strlen(value) + strlen(s) + 1);
         strcat(value, s);
@@ -112,6 +162,19 @@ token_T* lexer_collect_string(lexer_T* lexer)
     }
 
     lexer_advance(lexer);
+
+    if (lexer->interp_queue_size > 0) {
+        if (strlen(value) > 0)
+            lexer->interp_queue[lexer->interp_queue_size++] =
+                stamp(init_token(TOKEN_STRING_PART, value), start_line, start_col);
+        else
+            free(value);
+
+        token_T* first = lexer->interp_queue[0];
+        lexer->interp_queue_pos = 1;
+        return first;
+    }
+
     return stamp(init_token(TOKEN_STRING, value), start_line, start_col);
 }
 
@@ -165,6 +228,9 @@ token_T* lexer_collect_id(lexer_T* lexer)
 
 token_T* lexer_get_next_token(lexer_T* lexer)
 {
+    if (lexer->interp_queue_pos < lexer->interp_queue_size)
+        return lexer->interp_queue[lexer->interp_queue_pos++];
+
     while (lexer->currentChar != '\0' && lexer->index < lexer->contents_len)
     {
         if (isspace(lexer->currentChar)) {
@@ -187,7 +253,7 @@ token_T* lexer_get_next_token(lexer_T* lexer)
             lexer_advance(lexer);
             if (lexer->currentChar == '=') {
                 lexer_advance(lexer);
-                return stamp(init_token(TOKEN_IGUAL,    "=="), line, col);
+                return stamp(init_token(TOKEN_IGUAL, "=="), line, col);
             }
             return stamp(init_token(TOKEN_EQUALS, "="), line, col);
 

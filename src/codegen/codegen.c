@@ -18,13 +18,14 @@ static void emit_retorne(codegen_T* cg, AST_T* ast);
 static void emit_binop(codegen_T* cg, AST_T* ast);
 static void emit_unop(codegen_T* cg, AST_T* ast);
 static void emit_string(codegen_T* cg, AST_T* ast);
+static void emit_string_interp(codegen_T* cg, AST_T* ast);
 static void emit_real(codegen_T* cg, AST_T* ast);
 static void emit_bool(codegen_T* cg, AST_T* ast);
 static void emit_variable(codegen_T* cg, AST_T* ast);
 
 typedef struct {
-    int      ast_type;
-    emit_fn  fn;
+    int     ast_type;
+    emit_fn fn;
 } emit_rule_t;
 
 static emit_rule_t emit_rules[] = {
@@ -42,6 +43,7 @@ static emit_rule_t emit_rules[] = {
     { AST_BINOP,               emit_binop               },
     { AST_UNOP,                emit_unop                },
     { AST_STRING,              emit_string              },
+    { AST_STRING_INTERP,       emit_string_interp       },
     { AST_REAL,                emit_real                },
     { AST_BOOL,                emit_bool                },
     { AST_VARIABLE,            emit_variable            },
@@ -103,7 +105,7 @@ void codegen_emit(codegen_T* cg, AST_T* ast)
     if (!ast) return;
 
     for (int i = 0; emit_rules[i].fn != NULL; i++) {
-        if (emit_rules[i].ast_type == ast->type) {
+        if (emit_rules[i].ast_type == (int)ast->type) {
             emit_rules[i].fn(cg, ast);
             return;
         }
@@ -166,8 +168,39 @@ static void emit_assign(codegen_T* cg, AST_T* ast)
     fprintf(cg->output, ";\n");
 }
 
+static void emit_string_interp(codegen_T* cg, AST_T* ast)
+{
+    fprintf(cg->output, "printf(\"");
+
+    for (size_t i = 0; i < ast->interp_size; i++) {
+        AST_T* part = ast->interp_parts[i];
+        if (part->type == AST_STRING)
+            fprintf(cg->output, "%s", part->string_value);
+        else
+            fprintf(cg->output, "%%s");
+    }
+
+    fprintf(cg->output, "\"");
+
+    for (size_t i = 0; i < ast->interp_size; i++) {
+        AST_T* part = ast->interp_parts[i];
+        if (part->type == AST_VARIABLE)
+            fprintf(cg->output, ", %s", part->variable_name);
+    }
+
+    fprintf(cg->output, ");\n");
+}
+
 static void emit_function_call(codegen_T* cg, AST_T* ast)
 {
+    if (strcmp(ast->function_call_name, "escreva") == 0 &&
+        ast->function_call_arguments_size == 1 &&
+        ast->function_call_arguments[0]->type == AST_STRING_INTERP)
+    {
+        emit_string_interp(cg, ast->function_call_arguments[0]);
+        return;
+    }
+
     const char* name = resolve_builtin(ast->function_call_name);
     fprintf(cg->output, "%s(", name);
     for (size_t i = 0; i < ast->function_call_arguments_size; i++) {

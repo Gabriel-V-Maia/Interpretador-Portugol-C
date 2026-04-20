@@ -1,22 +1,25 @@
 #include <stddef.h>
-
 #include "../debugger/debugger.h"
 #include "token.h"
 
 #ifndef LEXER_H
 #define LEXER_H
 
+#define INTERP_QUEUE_MAX 64
+
 typedef struct LEXER_STRUCT
 {
     char         currentChar;
     unsigned int index;
     char*        contents;
-    size_t       contents_len; 
+    size_t       contents_len;
     int          line;
-    int column;
-  Debugger* debugger_instance;
-    
-} lexer_T; 
+    int          column;
+    Debugger*    debugger_instance;
+    token_T*     interp_queue[INTERP_QUEUE_MAX];
+    int          interp_queue_size;
+    int          interp_queue_pos;
+} lexer_T;
 
 lexer_T* init_lexer(char* contents, Debugger* debugger_instance);
 void     lexer_advance(lexer_T* lexer);

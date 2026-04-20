@@ -24,9 +24,10 @@ static const char* binop_op_str(int op)
 AST_T* init_ast(int type)
 {
     AST_T* ast = calloc(1, sizeof(AST_T));
-    ast->type = type;
-    ast->variable_definition_varname = NULL;
-    ast->variable_definition_value   = NULL;
+    ast->type                         = type;
+    ast->variable_definition_varname  = NULL;
+    ast->variable_definition_value    = NULL;
+    ast->variable_definition_type     = NULL;
     ast->variable_name                = NULL;
     ast->function_call_name           = NULL;
     ast->function_call_arguments      = NULL;
@@ -37,12 +38,15 @@ AST_T* init_ast(int type)
     ast->compound_size                = 0;
     ast->function_def_name            = NULL;
     ast->function_def_body            = NULL;
+    ast->interp_parts                 = NULL;
+    ast->interp_size                  = 0;
     return ast;
 }
 
 void ast_print(AST_T* ast)
 {
     if (!ast) { printf("NULL"); return; }
+
     switch (ast->type) {
     case AST_VARIABLE_DEFINITION:
         printf("AST_VARIABLE_DEFINITION(type: %s, varname: %s, value: ",
@@ -61,6 +65,14 @@ void ast_print(AST_T* ast)
         break;
     case AST_STRING:
         printf("AST_STRING(value: \"%s\")", ast->string_value);
+        break;
+    case AST_STRING_INTERP:
+        printf("AST_STRING_INTERP([");
+        for (size_t i = 0; i < ast->interp_size; i++) {
+            ast_print(ast->interp_parts[i]);
+            if (i + 1 < ast->interp_size) printf(", ");
+        }
+        printf("])");
         break;
     case AST_REAL:
         printf("AST_REAL(value: %s)", ast->real_value);
@@ -156,12 +168,10 @@ void ast_print(AST_T* ast)
         printf(")");
         break;
     case AST_IMPORT:
-      printf("AST_IMPORT(path: \"%s\")", ast->import_path);
-      break;
-
+        printf("AST_IMPORT(path: \"%s\")", ast->import_path);
+        break;
     default:
         printf("AST_UNKNOWN(%d)", ast->type);
         break;
-
     }
 }

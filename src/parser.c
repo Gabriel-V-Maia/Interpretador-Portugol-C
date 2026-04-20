@@ -33,11 +33,6 @@ static statement_rule_t statement_rules[] = {
     { 0, NULL }
 };
 
-static int isTypeKeyword(TokenType type)
-{
-    return type == TOKEN_ID;
-}
-
 static const char* typeKeywords[] = { "inteiro", "real", "logico", "cadeia", NULL };
 
 static int isVarType(const char* value)
@@ -85,9 +80,38 @@ static AST_T* parser_parse_import(parser_T* parser)
 
 AST_T* parser_parse_string(parser_T* parser)
 {
-    AST_T* node = init_ast(AST_STRING);
-    node->string_value = parser->current_token->value;
-    parser_eat(parser, TOKEN_STRING);
+    if (parser->current_token->type == TOKEN_STRING) {
+        AST_T* node = init_ast(AST_STRING);
+        node->string_value = parser->current_token->value;
+        parser_eat(parser, TOKEN_STRING);
+        return node;
+    }
+
+    AST_T* node = init_ast(AST_STRING_INTERP);
+    node->interp_parts = NULL;
+    node->interp_size  = 0;
+
+    while (parser->current_token->type == TOKEN_STRING_PART ||
+           parser->current_token->type == TOKEN_INTERP_EXPR)
+    {
+        AST_T* part;
+
+        if (parser->current_token->type == TOKEN_STRING_PART) {
+            part = init_ast(AST_STRING);
+            part->string_value = parser->current_token->value;
+            parser_eat(parser, TOKEN_STRING_PART);
+        } else {
+            part = init_ast(AST_VARIABLE);
+            part->variable_name = parser->current_token->value;
+            parser_eat(parser, TOKEN_INTERP_EXPR);
+        }
+
+        node->interp_size++;
+        node->interp_parts = realloc(node->interp_parts,
+            node->interp_size * sizeof(AST_T*));
+        node->interp_parts[node->interp_size - 1] = part;
+    }
+
     return node;
 }
 
@@ -155,9 +179,11 @@ AST_T* parser_parse_factor(parser_T* parser)
 {
     switch (parser->current_token->type)
     {
-    case TOKEN_REAL:   return parser_parse_real(parser);
-    case TOKEN_STRING: return parser_parse_string(parser);
-    case TOKEN_BOOL:   return parser_parse_bool(parser);
+    case TOKEN_REAL:         return parser_parse_real(parser);
+    case TOKEN_STRING:       return parser_parse_string(parser);
+    case TOKEN_STRING_PART:  return parser_parse_string(parser);
+    case TOKEN_INTERP_EXPR:  return parser_parse_string(parser);
+    case TOKEN_BOOL:         return parser_parse_bool(parser);
     case TOKEN_NAO:
     {
         parser_eat(parser, TOKEN_NAO);
@@ -302,7 +328,7 @@ static AST_T* parser_parse_id(parser_T* parser)
     if (isVarType(parser->current_token->value))
         return parser_parse_variable_definition(parser);
 
-    token_T* id_token = parser->current_token; 
+    token_T* id_token = parser->current_token;
     char* name = id_token->value;
 
     parser_eat(parser, TOKEN_ID);
@@ -348,7 +374,6 @@ static AST_T* parser_parse_id(parser_T* parser)
     exit(1);
 }
 
-
 AST_T* parser_parse_statements(parser_T* parser);
 
 static AST_T* parser_parse_block(parser_T* parser)
@@ -369,8 +394,7 @@ static AST_T* parser_parse_se(parser_T* parser)
     AST_T* then_body = parser_parse_block(parser);
     AST_T* else_body = NULL;
 
-    if (parser->current_token->type == TOKEN_SENAO)
-    {
+    if (parser->current_token->type == TOKEN_SENAO) {
         parser_eat(parser, TOKEN_SENAO);
         else_body = parser_parse_block(parser);
     }
@@ -505,6 +529,7 @@ AST_T* parser_parse_function_def(parser_T* parser)
     debugger_print(parser->debugger_instance, "Parseando funcao: %s", name);
     return node;
 }
+
 AST_T* parser_parse_programa(parser_T* parser)
 {
     parser_eat(parser, TOKEN_PROGRAMA);
