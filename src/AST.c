@@ -37,7 +37,11 @@ AST_T* init_ast(int type)
     ast->compound_value               = NULL;
     ast->compound_size                = 0;
     ast->function_def_name            = NULL;
+    ast->function_def_return_type     = NULL;
     ast->function_def_body            = NULL;
+    ast->function_def_param_names     = NULL;
+    ast->function_def_param_types     = NULL;
+    ast->function_def_param_count     = 0;
     ast->interp_parts                 = NULL;
     ast->interp_size                  = 0;
     return ast;
@@ -89,7 +93,14 @@ void ast_print(AST_T* ast)
         printf("])");
         break;
     case AST_FUNCTION_DEF:
-        printf("AST_FUNCTION_DEF(name: %s, body:\n", ast->function_def_name);
+        printf("AST_FUNCTION_DEF(name: %s, return: %s, params: [",
+            ast->function_def_name,
+            ast->function_def_return_type ? ast->function_def_return_type : "nulo");
+        for (size_t i = 0; i < ast->function_def_param_count; i++) {
+            printf("%s %s", ast->function_def_param_types[i], ast->function_def_param_names[i]);
+            if (i + 1 < ast->function_def_param_count) printf(", ");
+        }
+        printf("], body:\n");
         ast_print(ast->function_def_body);
         printf(")");
         break;

@@ -76,11 +76,13 @@ static const char* type_to_format(const char* type)
 
 static const char* portugol_type_to_c(const char* type)
 {
+    if (!type)                        return "void";
     if (strcmp(type, "inteiro") == 0) return "int";
     if (strcmp(type, "real")    == 0) return "double";
     if (strcmp(type, "logico")  == 0) return "int";
     if (strcmp(type, "cadeia")  == 0) return "char*";
-    return "void*";
+    if (strcmp(type, "nulo")    == 0) return "void";
+    return "void";
 }
 
 static const char* binop_str(int op)
@@ -139,6 +141,32 @@ void codegen_emit(codegen_T* cg, AST_T* ast)
     fprintf(stderr, "codegen: tipo desconhecido %d\n", ast->type);
 }
 
+static void emit_func_signature(codegen_T* cg, AST_T* ast)
+{
+    const char* rtype = portugol_type_to_c(ast->function_def_return_type);
+    fprintf(cg->output, "%s %s(", rtype, ast->function_def_name);
+
+    for (size_t i = 0; i < ast->function_def_param_count; i++) {
+        fprintf(cg->output, "%s %s",
+            portugol_type_to_c(ast->function_def_param_types[i]),
+            ast->function_def_param_names[i]);
+        if (i + 1 < ast->function_def_param_count)
+            fprintf(cg->output, ", ");
+    }
+
+    if (ast->function_def_param_count == 0)
+        fprintf(cg->output, "void");
+
+    fprintf(cg->output, ")");
+}
+
+static void emit_forward_decl(codegen_T* cg, AST_T* ast)
+{
+    if (strcmp(ast->function_def_name, "inicio") == 0) return;
+    emit_func_signature(cg, ast);
+    fprintf(cg->output, ";\n");
+}
+
 static void emit_programa(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "#include <stdio.h>\n");
@@ -146,9 +174,8 @@ static void emit_programa(codegen_T* cg, AST_T* ast)
 
     for (size_t i = 0; i < ast->compound_size; i++) {
         AST_T* node = ast->compound_value[i];
-        if (node->type == AST_FUNCTION_DEF &&
-            strcmp(node->function_def_name, "inicio") != 0)
-            fprintf(cg->output, "void %s(void);\n", node->function_def_name);
+        if (node->type == AST_FUNCTION_DEF)
+            emit_forward_decl(cg, node);
     }
 
     fprintf(cg->output, "\n");
@@ -159,10 +186,16 @@ static void emit_programa(codegen_T* cg, AST_T* ast)
 
 static void emit_function_def(codegen_T* cg, AST_T* ast)
 {
-    if (strcmp(ast->function_def_name, "inicio") == 0)
+    if (strcmp(ast->function_def_name, "inicio") == 0) {
         fprintf(cg->output, "int main(void) {\n");
-    else
-        fprintf(cg->output, "void %s(void) {\n", ast->function_def_name);
+    } else {
+        emit_func_signature(cg, ast);
+        fprintf(cg->output, " {\n");
+
+        for (size_t i = 0; i < ast->function_def_param_count; i++)
+            codegen_register_var(cg, ast->function_def_param_names[i],
+                                     ast->function_def_param_types[i]);
+    }
 
     codegen_emit(cg, ast->function_def_body);
 
@@ -193,27 +226,38 @@ static void emit_assign(codegen_T* cg, AST_T* ast)
     codegen_emit(cg, ast->assign_value);
     fprintf(cg->output, ";\n");
 }
-
 static void emit_string_interp(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "printf(\"");
 
     for (size_t i = 0; i < ast->interp_size; i++) {
         AST_T* part = ast->interp_parts[i];
-        if (part->type == AST_STRING) {
+        if (part->type == AST_STRING)
             fprintf(cg->output, "%s", part->string_value);
-        } else {
-            const char* vtype = codegen_lookup_type(cg, part->variable_name);
-            fprintf(cg->output, "%s", type_to_format(vtype));
-        }
+        else
+            fprintf(cg->output, "%%d");
     }
 
     fprintf(cg->output, "\"");
 
     for (size_t i = 0; i < ast->interp_size; i++) {
         AST_T* part = ast->interp_parts[i];
-        if (part->type == AST_VARIABLE)
-            fprintf(cg->output, ", %s", part->variable_name);
+        if (part->type == AST_STRING) continue;
+
+        fprintf(cg->output, ", ");
+
+        if (part->type != AST_FUNCTION_CALL) {
+            codegen_emit(cg, part);
+            continue;
+        }
+
+        fprintf(cg->output, "%s(", part->function_call_name);
+        for (size_t j = 0; j < part->function_call_arguments_size; j++) {
+            codegen_emit(cg, part->function_call_arguments[j]);
+            if (j + 1 < part->function_call_arguments_size)
+                fprintf(cg->output, ", ");
+        }
+        fprintf(cg->output, ")");
     }
 
     fprintf(cg->output, ");\n");
@@ -230,11 +274,14 @@ static void emit_function_call(codegen_T* cg, AST_T* ast)
     }
 
     const char* name = resolve_builtin(ast->function_call_name);
+
     fprintf(cg->output, "%s(", name);
+
     for (size_t i = 0; i < ast->function_call_arguments_size; i++) {
         codegen_emit(cg, ast->function_call_arguments[i]);
         if (i + 1 < ast->function_call_arguments_size)
             fprintf(cg->output, ", ");
+
     }
     fprintf(cg->output, ");\n");
 }

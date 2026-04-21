@@ -33,7 +33,7 @@ static statement_rule_t statement_rules[] = {
     { 0, NULL }
 };
 
-static const char* typeKeywords[] = { "inteiro", "real", "logico", "cadeia", NULL };
+static const char* typeKeywords[] = { "inteiro", "real", "logico", "cadeia", "nulo", NULL };
 
 static int isVarType(const char* value)
 {
@@ -41,6 +41,11 @@ static int isVarType(const char* value)
         if (strcmp(typeKeywords[i], value) == 0)
             return 1;
     return 0;
+}
+
+static int isReturnType(const char* value)
+{
+    return isVarType(value);
 }
 
 parser_T* init_parser(lexer_T* lexer, Diagnostic* diag, Debugger* debugger)
@@ -101,9 +106,12 @@ AST_T* parser_parse_string(parser_T* parser)
             part->string_value = parser->current_token->value;
             parser_eat(parser, TOKEN_STRING_PART);
         } else {
-            part = init_ast(AST_VARIABLE);
-            part->variable_name = parser->current_token->value;
+            char* expr_src = parser->current_token->value;
             parser_eat(parser, TOKEN_INTERP_EXPR);
+
+            lexer_T* inner_lexer   = init_lexer(expr_src, parser->debugger_instance);
+            parser_T* inner_parser = init_parser(inner_lexer, parser->diagnostic, parser->debugger_instance);
+            part = parser_parse_expr(inner_parser);
         }
 
         node->interp_size++;
@@ -179,11 +187,11 @@ AST_T* parser_parse_factor(parser_T* parser)
 {
     switch (parser->current_token->type)
     {
-    case TOKEN_REAL:         return parser_parse_real(parser);
-    case TOKEN_STRING:       return parser_parse_string(parser);
-    case TOKEN_STRING_PART:  return parser_parse_string(parser);
-    case TOKEN_INTERP_EXPR:  return parser_parse_string(parser);
-    case TOKEN_BOOL:         return parser_parse_bool(parser);
+    case TOKEN_REAL:        return parser_parse_real(parser);
+    case TOKEN_STRING:      return parser_parse_string(parser);
+    case TOKEN_STRING_PART: return parser_parse_string(parser);
+    case TOKEN_INTERP_EXPR: return parser_parse_string(parser);
+    case TOKEN_BOOL:        return parser_parse_bool(parser);
     case TOKEN_NAO:
     {
         parser_eat(parser, TOKEN_NAO);
@@ -325,7 +333,8 @@ AST_T* parser_parse_variable_definition(parser_T* parser)
 
 static AST_T* parser_parse_id(parser_T* parser)
 {
-    if (isVarType(parser->current_token->value))
+    if (isVarType(parser->current_token->value) &&
+        strcmp(parser->current_token->value, "nulo") != 0)
         return parser_parse_variable_definition(parser);
 
     token_T* id_token = parser->current_token;
@@ -512,21 +521,63 @@ AST_T* parser_parse_statements(parser_T* parser)
 
 AST_T* parser_parse_function_def(parser_T* parser)
 {
+    char* return_type = NULL;
+
+    if (parser->current_token->type == TOKEN_ID &&
+        isReturnType(parser->current_token->value))
+    {
+        return_type = parser->current_token->value;
+        parser_eat(parser, TOKEN_ID);
+    }
+
     parser_eat(parser, TOKEN_FUNC);
 
     char* name = parser->current_token->value;
     parser_eat(parser, TOKEN_ID);
 
     parser_eat(parser, TOKEN_LPAREN);
+
+    char** param_names = NULL;
+    char** param_types = NULL;
+    size_t param_count = 0;
+
+    while (parser->current_token->type != TOKEN_RPAREN &&
+           parser->current_token->type != TOKEN_END)
+    {
+        char* ptype = parser->current_token->value;
+        parser_eat(parser, TOKEN_ID);
+
+        char* pname = parser->current_token->value;
+        parser_eat(parser, TOKEN_ID);
+
+        param_count++;
+        param_types = realloc(param_types, param_count * sizeof(char*));
+        param_names = realloc(param_names, param_count * sizeof(char*));
+        param_types[param_count - 1] = ptype;
+        param_names[param_count - 1] = pname;
+
+        if (parser->current_token->type == TOKEN_VIRGULA)
+            parser_eat(parser, TOKEN_VIRGULA);
+    }
+
     parser_eat(parser, TOKEN_RPAREN);
 
     AST_T* body = parser_parse_block(parser);
 
     AST_T* node = init_ast(AST_FUNCTION_DEF);
-    node->function_def_name = name;
-    node->function_def_body = body;
+    node->function_def_name        = name;
+    node->function_def_return_type = return_type;
+    node->function_def_body        = body;
+    node->function_def_param_names = param_names;
+    node->function_def_param_types = param_types;
+    node->function_def_param_count = param_count;
 
-    debugger_print(parser->debugger_instance, "Parseando funcao: %s", name);
+    debugger_print(parser->debugger_instance,
+        "Parseando funcao: %s -> %s (%zu params)",
+        name,
+        return_type ? return_type : "nulo",
+        param_count);
+
     return node;
 }
 
@@ -546,11 +597,13 @@ AST_T* parser_parse_programa(parser_T* parser)
 
         if (parser->current_token->type == TOKEN_IMPORTAR)
             node = parser_parse_import(parser);
-        else if (parser->current_token->type == TOKEN_FUNC)
+        else if (parser->current_token->type == TOKEN_FUNC ||
+                 (parser->current_token->type == TOKEN_ID &&
+                  isReturnType(parser->current_token->value)))
             node = parser_parse_function_def(parser);
         else {
             diagnostic_error(parser->diagnostic, parser->current_token,
-                "esperava 'importar' ou 'funcao', encontrado '%s'",
+                "esperava 'importar', tipo de retorno ou 'funcao', encontrado '%s'",
                 parser->current_token->value);
             exit(1);
         }
