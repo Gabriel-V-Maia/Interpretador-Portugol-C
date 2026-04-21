@@ -141,6 +141,50 @@ void codegen_emit(codegen_T* cg, AST_T* ast)
     fprintf(stderr, "codegen: tipo desconhecido %d\n", ast->type);
 }
 
+static void emit_expr(codegen_T* cg, AST_T* ast)
+{
+    if (!ast) return;
+
+    switch (ast->type) {
+    case AST_FUNCTION_CALL:
+        fprintf(cg->output, "%s(", resolve_builtin(ast->function_call_name));
+        for (size_t i = 0; i < ast->function_call_arguments_size; i++) {
+            emit_expr(cg, ast->function_call_arguments[i]);
+            if (i + 1 < ast->function_call_arguments_size)
+                fprintf(cg->output, ", ");
+        }
+        fprintf(cg->output, ")");
+        break;
+    case AST_BINOP:
+        fprintf(cg->output, "(");
+        emit_expr(cg, ast->binop_left);
+        fprintf(cg->output, " %s ", binop_str(ast->binop_op));
+        emit_expr(cg, ast->binop_right);
+        fprintf(cg->output, ")");
+        break;
+    case AST_UNOP:
+        fprintf(cg->output, "!(");
+        emit_expr(cg, ast->unop_operand);
+        fprintf(cg->output, ")");
+        break;
+    case AST_VARIABLE:
+        fprintf(cg->output, "%s", ast->variable_name);
+        break;
+    case AST_REAL:
+        fprintf(cg->output, "%s", ast->real_value);
+        break;
+    case AST_BOOL:
+        fprintf(cg->output, "%d", ast->bool_value);
+        break;
+    case AST_STRING:
+        fprintf(cg->output, "\"%s\"", ast->string_value);
+        break;
+    default:
+        codegen_emit(cg, ast);
+        break;
+    }
+}
+
 static void emit_func_signature(codegen_T* cg, AST_T* ast)
 {
     const char* rtype = portugol_type_to_c(ast->function_def_return_type);
@@ -216,26 +260,31 @@ static void emit_variable_definition(codegen_T* cg, AST_T* ast)
     const char* ctype = portugol_type_to_c(ast->variable_definition_type);
     codegen_register_var(cg, ast->variable_definition_varname, ast->variable_definition_type);
     fprintf(cg->output, "%s %s = ", ctype, ast->variable_definition_varname);
-    codegen_emit(cg, ast->variable_definition_value);
+    emit_expr(cg, ast->variable_definition_value);
     fprintf(cg->output, ";\n");
 }
 
 static void emit_assign(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "%s = ", ast->assign_varname);
-    codegen_emit(cg, ast->assign_value);
+    emit_expr(cg, ast->assign_value);
     fprintf(cg->output, ";\n");
 }
+
 static void emit_string_interp(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "printf(\"");
 
     for (size_t i = 0; i < ast->interp_size; i++) {
         AST_T* part = ast->interp_parts[i];
-        if (part->type == AST_STRING)
+        if (part->type == AST_STRING) {
             fprintf(cg->output, "%s", part->string_value);
-        else
+        } else if (part->type == AST_VARIABLE) {
+            const char* vtype = codegen_lookup_type(cg, part->variable_name);
+            fprintf(cg->output, "%s", type_to_format(vtype));
+        } else {
             fprintf(cg->output, "%%d");
+        }
     }
 
     fprintf(cg->output, "\"");
@@ -243,21 +292,8 @@ static void emit_string_interp(codegen_T* cg, AST_T* ast)
     for (size_t i = 0; i < ast->interp_size; i++) {
         AST_T* part = ast->interp_parts[i];
         if (part->type == AST_STRING) continue;
-
         fprintf(cg->output, ", ");
-
-        if (part->type != AST_FUNCTION_CALL) {
-            codegen_emit(cg, part);
-            continue;
-        }
-
-        fprintf(cg->output, "%s(", part->function_call_name);
-        for (size_t j = 0; j < part->function_call_arguments_size; j++) {
-            codegen_emit(cg, part->function_call_arguments[j]);
-            if (j + 1 < part->function_call_arguments_size)
-                fprintf(cg->output, ", ");
-        }
-        fprintf(cg->output, ")");
+        emit_expr(cg, part);
     }
 
     fprintf(cg->output, ");\n");
@@ -274,14 +310,11 @@ static void emit_function_call(codegen_T* cg, AST_T* ast)
     }
 
     const char* name = resolve_builtin(ast->function_call_name);
-
     fprintf(cg->output, "%s(", name);
-
     for (size_t i = 0; i < ast->function_call_arguments_size; i++) {
-        codegen_emit(cg, ast->function_call_arguments[i]);
+        emit_expr(cg, ast->function_call_arguments[i]);
         if (i + 1 < ast->function_call_arguments_size)
             fprintf(cg->output, ", ");
-
     }
     fprintf(cg->output, ");\n");
 }
@@ -289,7 +322,7 @@ static void emit_function_call(codegen_T* cg, AST_T* ast)
 static void emit_se(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "if (");
-    codegen_emit(cg, ast->se_condition);
+    emit_expr(cg, ast->se_condition);
     fprintf(cg->output, ") {\n");
     codegen_emit(cg, ast->se_then);
     fprintf(cg->output, "}");
@@ -306,7 +339,7 @@ static void emit_se(codegen_T* cg, AST_T* ast)
 static void emit_enquanto(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "while (");
-    codegen_emit(cg, ast->enquanto_condition);
+    emit_expr(cg, ast->enquanto_condition);
     fprintf(cg->output, ") {\n");
     codegen_emit(cg, ast->enquanto_body);
     fprintf(cg->output, "}\n");
@@ -315,9 +348,9 @@ static void emit_enquanto(codegen_T* cg, AST_T* ast)
 static void emit_para(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "for (int %s = ", ast->para_var);
-    codegen_emit(cg, ast->para_from);
+    emit_expr(cg, ast->para_from);
     fprintf(cg->output, "; %s < ", ast->para_var);
-    codegen_emit(cg, ast->para_to);
+    emit_expr(cg, ast->para_to);
     fprintf(cg->output, "; %s++) {\n", ast->para_var);
     codegen_emit(cg, ast->para_body);
     fprintf(cg->output, "}\n");
@@ -328,30 +361,30 @@ static void emit_repita(codegen_T* cg, AST_T* ast)
     fprintf(cg->output, "do {\n");
     codegen_emit(cg, ast->repita_body);
     fprintf(cg->output, "} while (!(");
-    codegen_emit(cg, ast->repita_condition);
+    emit_expr(cg, ast->repita_condition);
     fprintf(cg->output, "));\n");
 }
 
 static void emit_retorne(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "return ");
-    codegen_emit(cg, ast->retorne_value);
+    emit_expr(cg, ast->retorne_value);
     fprintf(cg->output, ";\n");
 }
 
 static void emit_binop(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "(");
-    codegen_emit(cg, ast->binop_left);
+    emit_expr(cg, ast->binop_left);
     fprintf(cg->output, " %s ", binop_str(ast->binop_op));
-    codegen_emit(cg, ast->binop_right);
+    emit_expr(cg, ast->binop_right);
     fprintf(cg->output, ")");
 }
 
 static void emit_unop(codegen_T* cg, AST_T* ast)
 {
     fprintf(cg->output, "!(");
-    codegen_emit(cg, ast->unop_operand);
+    emit_expr(cg, ast->unop_operand);
     fprintf(cg->output, ")");
 }
 
