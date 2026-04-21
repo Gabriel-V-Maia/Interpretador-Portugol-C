@@ -8,9 +8,11 @@
 </p>
 
 <p align="center">
-  Compilador de <strong>Portugol</strong> escrito em <strong>C</strong>, transpilando para C e compilando para um executável nativo.
+  Interpretador/compilador de <strong>Portugol</strong> escrito em <strong>C</strong>.
   <br>
-  Sintaxe baseada no <a href="https://github.com/dgadelha/Portugol-Webstudio">Portugol-Webstudio</a>.
+  Atualmente realiza análise léxica e sintática, com geração de AST e base para transpilar para C.
+  <br>
+  Sintaxe inspirada no <a href="https://github.com/dgadelha/Portugol-Webstudio">Portugol-Webstudio</a>.
 </p>
 
 ---
@@ -19,71 +21,96 @@
 
 ```mermaid
 flowchart LR
-    A([main.por]) --> B[Lexer] --> C[Parser] --> D{importar?}
+    A[arquivo.por] --> B[Lexer]
+    B --> C[Parser]
+    C --> D[AST]
 
-    D -->|não| K
-    D -->|sim| E([importado.por]) --> F[Lexer] --> G[Parser] --> H[AST importada] --> I[Preprocessador]
+    D --> E{importar?}
+    E -->|sim| F[Preprocessor]
+    E -->|nao| G[AST final]
 
-    C --> I
-    I --> K[AST final] --> L[Codegen] --> M([output.c]) --> N[GCC] --> O([.exe])
+    F --> G
+    G --> H[Codegen]
+    H --> I[output.c]
+    I --> J[GCC]
+    J --> K[executavel]
 ```
 
 ---
 
-## Exemplo
+## Exemplos
+
+### Fibonacci
 
 ```portugol
 programa {
-  importar "std/net.por"
-
-  funcao inicio() {
-    cadeia nome = "Maria Silva"
-    inteiro idade = 28
-    logico estudante = verdadeiro
-
-    se (estudante e idade < 30) {
-      escreva("jovem estudante")
-    } senao {
-      escreva("nao e estudante jovem")
+  inteiro funcao fib(inteiro n) {
+    se (n <= 1) {
+      retorne n
     }
+    retorne fib(n - 1) + fib(n - 2)
+  }
 
-    para i = 0 ate 5 {
-      escreva(i)
-    }
+  nulo funcao inicio() {
+    escreva("${fib(10)}\n")
   }
 }
 ```
+
+### Fatorial
+
+```portugol
+programa {
+  inteiro funcao fat(inteiro n) {
+    se (n == 0) {
+      retorne 1
+    }
+    retorne n * fat(n - 1)
+  }
+
+  nulo funcao inicio() {
+    escreva("${fat(5)}\n")
+  }
+}
+```
+
+Arquivos disponíveis em `examples/`:
+
+* `fibbonaci.por`
+* `fatorial.por`
 
 ---
 
 ## Status
 
-| Componente | Status |
-|---|---|
-| Lexer | Concluído |
-| Parser | Em andamento |
-| Preprocessor (`importar`) | Pendente |
-| Codegen (transpile para C) | Pendente |
-| Visitor | Pendente |
-| Definição de funções | Em andamento |
-| Chamada de funções | Pendente |
-| Argumentos em funções | Em andamento |
-| Leitura de arquivos | Concluído |
-| Diagnósticos de erro | Concluído |
+| Componente                | Status                        |
+| ------------------------- | ----------------------------- |
+| Lexer                     | Concluído                     |
+| Parser                    | Em andamento                  |
+| AST                       | Concluído (estrutura base)    |
+| Preprocessor (`importar`) | Em desenvolvimento            |
+| Codegen (C)               | Pendente                      |
+| Execução direta           | Pendente                      |
+| Funções (declaração)      | Em andamento                  |
+| Funções (chamada)         | Parcial                       |
+| Argumentos                | Em andamento                  |
+| Recursão                  | Parcial (estrutura suportada) |
+| Diagnósticos de erro      | Concluído                     |
+| Debugger                  | Concluído                     |
 
 ---
 
 ## Uso
 
 ```bash
-# compilar o projeto
+# compilar
 make
 
-# rodar normalmente
-./build/portugol arquivo.por
+# executar arquivo
+./build/portugol examples/fibbonaci.por
 
-# rodar com debug (imprime a AST e logs internos)
-./build/portugol -d arquivo.por
+# modo debug (AST + logs)
+./build/portugol -d examples/fatorial.por
 ```
 
 ---
@@ -92,27 +119,48 @@ make
 
 ```
 .
+├── build/              # binários gerados
+├── examples/           # exemplos em Portugol
+├── libs/               # futuras bibliotecas padrão
 ├── src/
 │   ├── include/        # headers
-│   ├── diagnostics/    # erros com linha e coluna
-│   ├── debugger/       # logs de debug
+│   ├── diagnostics/    # erros e mensagens
+│   ├── debugger/       # logs internos
+│   ├── helpers/        # utilitários
+│   ├── preprocessor/   # sistema de importação
+│   ├── codegen/        # geração de C
+│   ├── AST.c
 │   ├── lexer.c
 │   ├── parser.c
-│   ├── AST.c
+│   ├── token.c
 │   └── main.c
-├── examples/           # arquivos .por de exemplo
 ├── Makefile
 └── README.md
 ```
 
 ---
 
+## Roadmap
+
+* [ ] Finalizar parser
+* [ ] Implementar `importar`
+* [ ] Gerar código C completo
+* [ ] Compilação automática com GCC
+* [ ] Biblioteca padrão (`std`)
+* [ ] Melhorar mensagens de erro
+* [ ] Testes automatizados
+
+---
+
 ## Contribuições
 
-Abra uma _issue_ ou envie um _pull request_. Qualquer contribuição é bem-vinda.
+Sinta-se à vontade para abrir *issues* ou enviar *pull requests*.
+Sugestões, melhorias e correções são bem-vindas.
 
 ---
 
 ## Licença
 
 [MIT](LICENSE) — Gabriel Vinícius da Maia.
+
+```
