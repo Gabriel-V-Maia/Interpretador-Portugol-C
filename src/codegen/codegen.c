@@ -120,15 +120,14 @@ M_BuiltIn builtins[] = {
 void start_builtins() {
   hcreate(50);
 
-  for (int i = 0; i < sizeof(builtins) / sizeof(builtins[0]); i++) {
+  for (int i = 0; i < (int)sizeof(builtins) / (int)sizeof(builtins[0]); i++) {
     ENTRY item;
-    item.key = builtins[i].portugol;
-    item.data = builtins[i].c_target;
+    item.key = (char*)builtins[i].portugol;
+    item.data = (char*)builtins[i].c_target;
 
     hsearch(item, ENTER);
   }
 }
-
 
 static const char *resolve_builtin(const char *name) {
   ENTRY query, *res;
