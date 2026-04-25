@@ -111,7 +111,7 @@ AST_T* preprocessor_run(preprocessor_T* pre, AST_T* ast)
         imported = preprocessor_run(pre, imported);
 
         ast = inject_nodes(ast, imported, i);
-
+        i--;
         free(path);
         free(src);
     }
