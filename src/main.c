@@ -56,8 +56,10 @@ int main(int argc, char *argv[]) {
   
   PANIC_IF(optind >= argc, "uso: portugol [-d] <arquivo.por>");
 
-  char* source = read_file(argv[optind]);
+  char *source = read_file(argv[optind]);
 
+  start_builtins();
+  
   Debugger lexerDebugger = make_debugger("lexer", debug);
   lexer_T *lexer = init_lexer(source, &lexerDebugger);
 

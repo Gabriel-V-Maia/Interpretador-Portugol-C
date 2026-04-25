@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <search.h>
 
 static void emit_programa(codegen_T* cg, AST_T* ast);
 static void emit_function_def(codegen_T* cg, AST_T* ast);
@@ -104,12 +105,38 @@ static const char* binop_str(int op)
     }
 }
 
-static const char* resolve_builtin(const char* name)
-{
-    if (strcmp(name, "escreva") == 0) return "printf";
-    if (strcmp(name, "leia")    == 0) return "scanf";
-    if (strcmp(name, "sair")    == 0) return "exit";
-    return name;
+/* BUilt in mapping */
+
+typedef struct {
+  const char *portugol;
+  const char* c_target;
+} M_BuiltIn;
+
+M_BuiltIn builtins[] = {
+    {"escreva", "prinf"},
+    {"leia", "scanf"},
+    {"sair", "exit"}};
+
+void start_builtins() {
+  hcreate(50);
+
+  for (int i = 0; i < sizeof(builtins) / sizeof(builtins[0]); i++) {
+    ENTRY item;
+    item.key = builtins[i].portugol;
+    item.data = builtins[i].c_target;
+
+    hsearch(item, ENTER);
+  }
+}
+
+
+static const char *resolve_builtin(const char *name) {
+  ENTRY query, *res;
+  query.key = (char *)name;
+
+  res = hsearch(query, FIND);
+
+  return res ? (const char*)res->data : name;
 }
 
 codegen_T* init_codegen(const char* output_path, Debugger* debugger)
