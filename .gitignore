@@ -1,6 +1,10 @@
 # Prerequisites
 *.d
 
+# my personal scripts
+*.sh
+
+
 build/*
 build
 
