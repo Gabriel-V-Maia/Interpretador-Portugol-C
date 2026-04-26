@@ -230,7 +230,8 @@ AST_T* parser_parse_term(parser_T* parser)
     AST_T* left = parser_parse_factor(parser);
 
     while (parser->current_token->type == TOKEN_MULT ||
-           parser->current_token->type == TOKEN_DIV)
+           parser->current_token->type == TOKEN_DIV ||
+           parser->current_token->type == TOKEN_MOD)
     {
         token_T* tok = parser->current_token;
         TokenType op = tok->type;

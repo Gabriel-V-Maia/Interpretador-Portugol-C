@@ -100,7 +100,10 @@ static const char* binop_str(int op)
     case TOKEN_IGUAL:     return "==";
     case TOKEN_DIFERENTE: return "!=";
     case TOKEN_E:         return "&&";
-    case TOKEN_OU:        return "||";
+    case TOKEN_OU: return "||";
+    case TOKEN_MOD:
+      return "%";
+      
     default:              return "?";
     }
 }
@@ -280,13 +283,41 @@ static void emit_compound(codegen_T* cg, AST_T* ast)
     for (size_t i = 0; i < ast->compound_size; i++)
         codegen_emit(cg, ast->compound_value[i]);
 }
-
 static void emit_variable_definition(codegen_T* cg, AST_T* ast)
 {
     const char* ctype = portugol_type_to_c(ast->variable_definition_type);
-    codegen_register_var(cg, ast->variable_definition_varname, ast->variable_definition_type);
+    const char* ptype = ast->variable_definition_type;
+    codegen_register_var(cg, ast->variable_definition_varname, ptype);
+
+    AST_T* val = ast->variable_definition_value;
+
+    if (val->type == AST_FUNCTION_CALL &&
+        strcmp(val->function_call_name, "leia") == 0)
+    {
+        if (strcmp(ptype, "cadeia") == 0)
+            fprintf(cg->output, "char %s[256];\nscanf(\"%%s\", %s);\n",
+                ast->variable_definition_varname,
+                ast->variable_definition_varname);
+        else if (strcmp(ptype, "inteiro") == 0)
+            fprintf(cg->output, "%s %s;\nscanf(\"%%d\", &%s);\n",
+                ctype,
+                ast->variable_definition_varname,
+                ast->variable_definition_varname);
+        else if (strcmp(ptype, "real") == 0)
+            fprintf(cg->output, "%s %s;\nscanf(\"%%lf\", &%s);\n",
+                ctype,
+                ast->variable_definition_varname,
+                ast->variable_definition_varname);
+        else
+            fprintf(cg->output, "%s %s;\nscanf(\"%%d\", &%s);\n",
+                ctype,
+                ast->variable_definition_varname,
+                ast->variable_definition_varname);
+        return;
+    }
+
     fprintf(cg->output, "%s %s = ", ctype, ast->variable_definition_varname);
-    emit_expr(cg, ast->variable_definition_value);
+    emit_expr(cg, val);
     fprintf(cg->output, ";\n");
 }
 
@@ -335,6 +366,21 @@ static void emit_function_call(codegen_T* cg, AST_T* ast)
         return;
     }
 
+    if (strcmp(ast->function_call_name, "leia") == 0 &&
+    ast->function_call_arguments_size == 1 &&
+    ast->function_call_arguments[0]->type == AST_VARIABLE) 
+    {
+    const char* vname = ast->function_call_arguments[0]->variable_name;
+    const char* vtype = codegen_lookup_type(cg, vname);
+    const char* fmt   = type_to_format(vtype);
+
+    if (strcmp(vtype, "cadeia") == 0)
+        fprintf(cg->output, "scanf(\"%s\", %s);\n", fmt, vname);
+    else
+        fprintf(cg->output, "scanf(\"%s\", &%s);\n", fmt, vname);
+    return;
+    }
+
     const char* name = resolve_builtin(ast->function_call_name);
     fprintf(cg->output, "%s(", name);
     for (size_t i = 0; i < ast->function_call_arguments_size; i++) {
@@ -342,6 +388,9 @@ static void emit_function_call(codegen_T* cg, AST_T* ast)
         if (i + 1 < ast->function_call_arguments_size)
             fprintf(cg->output, ", ");
     }
+
+
+    
     fprintf(cg->output, ");\n");
 }
 

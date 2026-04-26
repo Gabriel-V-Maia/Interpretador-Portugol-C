@@ -289,7 +289,12 @@ token_T* lexer_get_next_token(lexer_T* lexer)
         case '}': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_CLOSINGBRACKET, "}")), line, col);
         case '(': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_LPAREN,         "(")), line, col);
         case ')': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_RPAREN,         ")")), line, col);
-        case ',': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_VIRGULA,        ",")), line, col);
+        case ',':
+          return stamp(
+              lexer_advance_with_token(lexer, init_token(TOKEN_VIRGULA, ",")),
+              line, col);
+        case '%': return stamp(lexer_advance_with_token(lexer, init_token(TOKEN_MOD, "%")), line, col);
+                      
         }
 
         lexer_advance(lexer);
