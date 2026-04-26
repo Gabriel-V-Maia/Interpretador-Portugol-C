@@ -85,6 +85,9 @@ typedef struct AST_STRUCT
 
     struct AST_STRUCT** interp_parts;
     size_t              interp_size;
+
+    int line;
+    int column;
 } AST_T;
 
 AST_T* init_ast(int type);

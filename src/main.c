@@ -14,6 +14,7 @@
 #include "diagnostics/diagnostics.h"
 #include "debugger/debugger.h"
 #include "codegen/codegen.h"
+#include "semantic/semantic.h"
 
 static char* read_file(const char* filepath)
 {
@@ -68,14 +69,18 @@ int main(int argc, char *argv[]) {
   Debugger parserDebugger = make_debugger("parser", debug);
   parser_T *parser = init_parser(lexer, diag, &parserDebugger);
   
-  AST_T*    root   = parser_parse(parser);
-  free(source);
-
+  AST_T*    root   = parser_parse(parser);  
   
   Debugger preDebugger = make_debugger("preprocessor", debug);
   preprocessor_T* pre = init_preprocessor(diag, &preDebugger);
   root = preprocessor_run(pre, root);
 
+  semantic_T *sem = init_semantic(diag);
+  semantic_check(sem, root);
+
+   free(source);
+
+  
   Debugger codegenDebugger = make_debugger("codegen", debug);
   codegen_T* cg = init_codegen("build/output.c", &codegenDebugger);
   codegen_emit(cg, root);

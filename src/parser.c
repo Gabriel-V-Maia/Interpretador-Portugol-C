@@ -24,12 +24,12 @@ static AST_T* parser_parse_retorne(parser_T* parser);
 static AST_T* parser_parse_import(parser_T* parser);
 
 static statement_rule_t statement_rules[] = {
-    { TOKEN_ID,       parser_parse_id       },
-    { TOKEN_SE,       parser_parse_se       },
-    { TOKEN_ENQUANTO, parser_parse_enquanto  },
-    { TOKEN_PARA,     parser_parse_para      },
-    { TOKEN_REPITA,   parser_parse_repita    },
-    { TOKEN_RETORNE,  parser_parse_retorne   },
+    { TOKEN_ID,       parser_parse_id      },
+    { TOKEN_SE,       parser_parse_se      },
+    { TOKEN_ENQUANTO, parser_parse_enquanto },
+    { TOKEN_PARA,     parser_parse_para    },
+    { TOKEN_REPITA,   parser_parse_repita  },
+    { TOKEN_RETORNE,  parser_parse_retorne },
     { 0, NULL }
 };
 
@@ -48,12 +48,20 @@ static int isReturnType(const char* value)
     return isVarType(value);
 }
 
+static AST_T* make_node(int type, token_T* tok)
+{
+    AST_T* node = init_ast(type);
+    node->line   = tok ? tok->line   : 0;
+    node->column = tok ? tok->column : 0;
+    return node;
+}
+
 parser_T* init_parser(lexer_T* lexer, Diagnostic* diag, Debugger* debugger)
 {
     parser_T* parser = calloc(1, sizeof(struct PARSER_STRUCT));
-    parser->lexer = lexer;
-    parser->current_token = lexer_get_next_token(lexer);
-    parser->diagnostic = diag;
+    parser->lexer             = lexer;
+    parser->current_token     = lexer_get_next_token(lexer);
+    parser->diagnostic        = diag;
     parser->debugger_instance = debugger;
     return parser;
 }
@@ -74,11 +82,9 @@ void parser_eat(parser_T* parser, TokenType token_type)
 static AST_T* parser_parse_import(parser_T* parser)
 {
     parser_eat(parser, TOKEN_IMPORTAR);
-
-    AST_T* node = init_ast(AST_IMPORT);
+    AST_T* node = make_node(AST_IMPORT, parser->current_token);
     node->import_path = parser->current_token->value;
     parser_eat(parser, TOKEN_STRING);
-
     debugger_print(parser->debugger_instance, "importar: %s", node->import_path);
     return node;
 }
@@ -86,13 +92,13 @@ static AST_T* parser_parse_import(parser_T* parser)
 AST_T* parser_parse_string(parser_T* parser)
 {
     if (parser->current_token->type == TOKEN_STRING) {
-        AST_T* node = init_ast(AST_STRING);
+        AST_T* node = make_node(AST_STRING, parser->current_token);
         node->string_value = parser->current_token->value;
         parser_eat(parser, TOKEN_STRING);
         return node;
     }
 
-    AST_T* node = init_ast(AST_STRING_INTERP);
+    AST_T* node = make_node(AST_STRING_INTERP, parser->current_token);
     node->interp_parts = NULL;
     node->interp_size  = 0;
 
@@ -102,21 +108,25 @@ AST_T* parser_parse_string(parser_T* parser)
         AST_T* part;
 
         if (parser->current_token->type == TOKEN_STRING_PART) {
-            part = init_ast(AST_STRING);
+            part = make_node(AST_STRING, parser->current_token);
             part->string_value = parser->current_token->value;
             parser_eat(parser, TOKEN_STRING_PART);
         } else {
-            char* expr_src = parser->current_token->value;
-            parser_eat(parser, TOKEN_INTERP_EXPR);
+            char* expr_src    = parser->current_token->value;
+            int interp_line   = parser->current_token->line;
+            int interp_column = parser->current_token->column;
 
-            lexer_T* inner_lexer   = init_lexer(expr_src, parser->debugger_instance);
+            parser_eat(parser, TOKEN_INTERP_EXPR);
+            lexer_T*  inner_lexer  = init_lexer(expr_src, parser->debugger_instance);
             parser_T* inner_parser = init_parser(inner_lexer, parser->diagnostic, parser->debugger_instance);
             part = parser_parse_expr(inner_parser);
+
+            part->line = interp_line;
+            part->column = interp_column;
         }
 
         node->interp_size++;
-        node->interp_parts = realloc(node->interp_parts,
-            node->interp_size * sizeof(AST_T*));
+        node->interp_parts = realloc(node->interp_parts, node->interp_size * sizeof(AST_T*));
         node->interp_parts[node->interp_size - 1] = part;
     }
 
@@ -125,7 +135,7 @@ AST_T* parser_parse_string(parser_T* parser)
 
 AST_T* parser_parse_real(parser_T* parser)
 {
-    AST_T* node = init_ast(AST_REAL);
+    AST_T* node = make_node(AST_REAL, parser->current_token);
     node->real_value = parser->current_token->value;
     parser_eat(parser, TOKEN_REAL);
     return node;
@@ -133,15 +143,18 @@ AST_T* parser_parse_real(parser_T* parser)
 
 AST_T* parser_parse_bool(parser_T* parser)
 {
-    AST_T* node = init_ast(AST_BOOL);
+    AST_T* node = make_node(AST_BOOL, parser->current_token);
     node->bool_value = strcmp(parser->current_token->value, "verdadeiro") == 0 ? 1 : 0;
     parser_eat(parser, TOKEN_BOOL);
     return node;
 }
 
+AST_T* parser_parse_expr(parser_T* parser);
+
 AST_T* parser_parse_variable(parser_T* parser)
 {
-    char* token_value = parser->current_token->value;
+    token_T* tok = parser->current_token;
+    char* token_value = tok->value;
     debugger_print(parser->debugger_instance, "parsing %s\n", token_value);
     parser_eat(parser, TOKEN_ID);
 
@@ -159,29 +172,25 @@ AST_T* parser_parse_variable(parser_T* parser)
             AST_T* arg = parser_parse_expr(parser);
             args = realloc(args, sizeof(AST_T*) * (argc + 1));
             args[argc++] = arg;
-
             if (parser->current_token->type == TOKEN_VIRGULA)
                 parser_eat(parser, TOKEN_VIRGULA);
         }
 
         parser_eat(parser, TOKEN_RPAREN);
 
-        AST_T* node = init_ast(AST_FUNCTION_CALL);
+        AST_T* node = make_node(AST_FUNCTION_CALL, tok);
         node->function_call_name           = token_value;
         node->function_call_arguments      = args;
         node->function_call_arguments_size = argc;
-
         debugger_print(parser->debugger_instance, "Parsing da função %s acabou!", token_value);
         return node;
     }
 
-    AST_T* node = init_ast(AST_VARIABLE);
+    AST_T* node = make_node(AST_VARIABLE, tok);
     node->variable_name = token_value;
     debugger_print(parser->debugger_instance, "done parsing ast_variable, %s\n", token_value);
     return node;
 }
-
-AST_T* parser_parse_expr(parser_T* parser);
 
 AST_T* parser_parse_factor(parser_T* parser)
 {
@@ -194,8 +203,9 @@ AST_T* parser_parse_factor(parser_T* parser)
     case TOKEN_BOOL:        return parser_parse_bool(parser);
     case TOKEN_NAO:
     {
+        token_T* tok = parser->current_token;
         parser_eat(parser, TOKEN_NAO);
-        AST_T* node = init_ast(AST_UNOP);
+        AST_T* node = make_node(AST_UNOP, tok);
         node->unop_op      = TOKEN_NAO;
         node->unop_operand = parser_parse_factor(parser);
         return node;
@@ -222,11 +232,11 @@ AST_T* parser_parse_term(parser_T* parser)
     while (parser->current_token->type == TOKEN_MULT ||
            parser->current_token->type == TOKEN_DIV)
     {
-        TokenType op = parser->current_token->type;
+        token_T* tok = parser->current_token;
+        TokenType op = tok->type;
         parser_eat(parser, op);
         AST_T* right = parser_parse_factor(parser);
-
-        AST_T* node  = init_ast(AST_BINOP);
+        AST_T* node  = make_node(AST_BINOP, tok);
         node->binop_left  = left;
         node->binop_op    = op;
         node->binop_right = right;
@@ -243,11 +253,11 @@ AST_T* parser_parse_arith(parser_T* parser)
     while (parser->current_token->type == TOKEN_MAIS ||
            parser->current_token->type == TOKEN_MENOS)
     {
-        TokenType op = parser->current_token->type;
+        token_T* tok = parser->current_token;
+        TokenType op = tok->type;
         parser_eat(parser, op);
         AST_T* right = parser_parse_term(parser);
-
-        AST_T* node  = init_ast(AST_BINOP);
+        AST_T* node  = make_node(AST_BINOP, tok);
         node->binop_left  = left;
         node->binop_op    = op;
         node->binop_right = right;
@@ -268,11 +278,11 @@ AST_T* parser_parse_comparison(parser_T* parser)
            parser->current_token->type == TOKEN_IGUAL    ||
            parser->current_token->type == TOKEN_DIFERENTE)
     {
-        TokenType op = parser->current_token->type;
+        token_T* tok = parser->current_token;
+        TokenType op = tok->type;
         parser_eat(parser, op);
         AST_T* right = parser_parse_arith(parser);
-
-        AST_T* node  = init_ast(AST_BINOP);
+        AST_T* node  = make_node(AST_BINOP, tok);
         node->binop_left  = left;
         node->binop_op    = op;
         node->binop_right = right;
@@ -294,11 +304,11 @@ AST_T* parser_parse_expr(parser_T* parser)
     while (parser->current_token->type == TOKEN_E ||
            parser->current_token->type == TOKEN_OU)
     {
-        TokenType op = parser->current_token->type;
+        token_T* tok = parser->current_token;
+        TokenType op = tok->type;
         parser_eat(parser, op);
         AST_T* right = parser_parse_comparison(parser);
-
-        AST_T* node  = init_ast(AST_BINOP);
+        AST_T* node  = make_node(AST_BINOP, tok);
         node->binop_left  = left;
         node->binop_op    = op;
         node->binop_right = right;
@@ -310,17 +320,19 @@ AST_T* parser_parse_expr(parser_T* parser)
 
 AST_T* parser_parse_variable_definition(parser_T* parser)
 {
-    char* variable_type = parser->current_token->value;
+    token_T* type_tok   = parser->current_token;
+    char* variable_type = type_tok->value;
     parser_eat(parser, TOKEN_ID);
 
-    char* variable_name = parser->current_token->value;
+    token_T* name_tok   = parser->current_token;
+    char* variable_name = name_tok->value;
     parser_eat(parser, TOKEN_ID);
 
     parser_eat(parser, TOKEN_EQUALS);
 
     AST_T* value = parser_parse_expr(parser);
 
-    AST_T* node = init_ast(AST_VARIABLE_DEFINITION);
+    AST_T* node = make_node(AST_VARIABLE_DEFINITION, name_tok);
     node->variable_definition_varname = variable_name;
     node->variable_definition_value   = value;
     node->variable_definition_type    = variable_type;
@@ -339,14 +351,12 @@ static AST_T* parser_parse_id(parser_T* parser)
 
     token_T* id_token = parser->current_token;
     char* name = id_token->value;
-
     parser_eat(parser, TOKEN_ID);
 
     if (parser->current_token->type == TOKEN_EQUALS) {
         parser_eat(parser, TOKEN_EQUALS);
         AST_T* value = parser_parse_expr(parser);
-
-        AST_T* node = init_ast(AST_ASSIGN);
+        AST_T* node = make_node(AST_ASSIGN, id_token);
         node->assign_varname = name;
         node->assign_value   = value;
         return node;
@@ -364,14 +374,13 @@ static AST_T* parser_parse_id(parser_T* parser)
             AST_T* arg = parser_parse_expr(parser);
             args = realloc(args, sizeof(AST_T*) * (argc + 1));
             args[argc++] = arg;
-
             if (parser->current_token->type == TOKEN_VIRGULA)
                 parser_eat(parser, TOKEN_VIRGULA);
         }
 
         parser_eat(parser, TOKEN_RPAREN);
 
-        AST_T* node = init_ast(AST_FUNCTION_CALL);
+        AST_T* node = make_node(AST_FUNCTION_CALL, id_token);
         node->function_call_name           = name;
         node->function_call_arguments      = args;
         node->function_call_arguments_size = argc;
@@ -395,6 +404,7 @@ static AST_T* parser_parse_block(parser_T* parser)
 
 static AST_T* parser_parse_se(parser_T* parser)
 {
+    token_T* tok = parser->current_token;
     parser_eat(parser, TOKEN_SE);
     parser_eat(parser, TOKEN_LPAREN);
     AST_T* condition = parser_parse_expr(parser);
@@ -408,16 +418,16 @@ static AST_T* parser_parse_se(parser_T* parser)
         else_body = parser_parse_block(parser);
     }
 
-    AST_T* node = init_ast(AST_SE);
+    AST_T* node = make_node(AST_SE, tok);
     node->se_condition = condition;
     node->se_then      = then_body;
     node->se_else      = else_body;
-
     return node;
 }
 
 static AST_T* parser_parse_enquanto(parser_T* parser)
 {
+    token_T* tok = parser->current_token;
     parser_eat(parser, TOKEN_ENQUANTO);
     parser_eat(parser, TOKEN_LPAREN);
     AST_T* condition = parser_parse_expr(parser);
@@ -425,15 +435,15 @@ static AST_T* parser_parse_enquanto(parser_T* parser)
 
     AST_T* body = parser_parse_block(parser);
 
-    AST_T* node = init_ast(AST_ENQUANTO);
+    AST_T* node = make_node(AST_ENQUANTO, tok);
     node->enquanto_condition = condition;
     node->enquanto_body      = body;
-
     return node;
 }
 
 static AST_T* parser_parse_para(parser_T* parser)
 {
+    token_T* tok = parser->current_token;
     parser_eat(parser, TOKEN_PARA);
 
     char* var = parser->current_token->value;
@@ -441,23 +451,21 @@ static AST_T* parser_parse_para(parser_T* parser)
 
     parser_eat(parser, TOKEN_EQUALS);
     AST_T* from = parser_parse_expr(parser);
-
     parser_eat(parser, TOKEN_ATE);
     AST_T* to = parser_parse_expr(parser);
-
     AST_T* body = parser_parse_block(parser);
 
-    AST_T* node = init_ast(AST_PARA);
+    AST_T* node = make_node(AST_PARA, tok);
     node->para_var  = var;
     node->para_from = from;
     node->para_to   = to;
     node->para_body = body;
-
     return node;
 }
 
 static AST_T* parser_parse_repita(parser_T* parser)
 {
+    token_T* tok = parser->current_token;
     parser_eat(parser, TOKEN_REPITA);
 
     AST_T* body = parser_parse_block(parser);
@@ -467,21 +475,20 @@ static AST_T* parser_parse_repita(parser_T* parser)
     AST_T* condition = parser_parse_expr(parser);
     parser_eat(parser, TOKEN_RPAREN);
 
-    AST_T* node = init_ast(AST_REPITA);
+    AST_T* node = make_node(AST_REPITA, tok);
     node->repita_body      = body;
     node->repita_condition = condition;
-
     return node;
 }
 
 static AST_T* parser_parse_retorne(parser_T* parser)
 {
+    token_T* tok = parser->current_token;
     parser_eat(parser, TOKEN_RETORNE);
     AST_T* value = parser_parse_expr(parser);
 
-    AST_T* node = init_ast(AST_RETORNE);
+    AST_T* node = make_node(AST_RETORNE, tok);
     node->retorne_value = value;
-
     return node;
 }
 
@@ -530,11 +537,11 @@ AST_T* parser_parse_function_def(parser_T* parser)
         parser_eat(parser, TOKEN_ID);
     }
 
+    token_T* func_tok = parser->current_token;
     parser_eat(parser, TOKEN_FUNC);
 
     char* name = parser->current_token->value;
     parser_eat(parser, TOKEN_ID);
-
     parser_eat(parser, TOKEN_LPAREN);
 
     char** param_names = NULL;
@@ -546,7 +553,6 @@ AST_T* parser_parse_function_def(parser_T* parser)
     {
         char* ptype = parser->current_token->value;
         parser_eat(parser, TOKEN_ID);
-
         char* pname = parser->current_token->value;
         parser_eat(parser, TOKEN_ID);
 
@@ -561,10 +567,9 @@ AST_T* parser_parse_function_def(parser_T* parser)
     }
 
     parser_eat(parser, TOKEN_RPAREN);
-
     AST_T* body = parser_parse_block(parser);
 
-    AST_T* node = init_ast(AST_FUNCTION_DEF);
+    AST_T* node = make_node(AST_FUNCTION_DEF, func_tok);
     node->function_def_name        = name;
     node->function_def_return_type = return_type;
     node->function_def_body        = body;
@@ -574,9 +579,7 @@ AST_T* parser_parse_function_def(parser_T* parser)
 
     debugger_print(parser->debugger_instance,
         "Parseando funcao: %s -> %s (%zu params)",
-        name,
-        return_type ? return_type : "nulo",
-        param_count);
+        name, return_type ? return_type : "nulo", param_count);
 
     return node;
 }
