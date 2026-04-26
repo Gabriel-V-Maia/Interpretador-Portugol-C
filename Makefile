@@ -8,7 +8,8 @@ SOURCES = $(wildcard $(SRC_DIR)/*.c) \
           $(wildcard $(SRC_DIR)/diagnostics/*.c) \
           $(wildcard $(SRC_DIR)/debugger/*.c) \
           $(wildcard $(SRC_DIR)/preprocessor/*.c) \
-		  $(wildcard $(SRC_DIR)/codegen/*.c)
+		  $(wildcard $(SRC_DIR)/codegen/*.c) \
+		  $(wildcard $(SRC_DIR)/semantic/*.c)
 
 
 OBJECTS   = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SOURCES))
