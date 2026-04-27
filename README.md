@@ -1,5 +1,12 @@
 # Interpretador Portugol
 
+<p align="center">
+  <img src="https://img.shields.io/badge/linguagem-C-blue?style=for-the-badge&logo=c">
+  <img src="https://img.shields.io/badge/status-em%20desenvolvimento-yellow?style=for-the-badge">
+  <img src="https://img.shields.io/badge/licença-MIT-green?style=for-the-badge">
+  <img src="https://img.shields.io/badge/plataforma-Linux%20%7C%20Windows-lightgrey?style=for-the-badge">
+</p>
+
 Projeto focado no desenvolvimento de um interpretador e compilador para a linguagem Portugol, escrito inteiramente em C. O sistema realiza o processamento completo do código, desde a análise inicial até a geração de uma Árvore de Sintaxe Abstrata (AST) com suporte para transpilação para C.
 
 A sintaxe é compatível com o padrão Portugol-Webstudio.
