@@ -313,7 +313,7 @@ make
 ## Roadmap
 
 * [ ] Finalizar parser
-* [ ] Implementar `importar`
+* [X] Implementar `importar`
 * [ ] Gerar código C completo
 * [ ] Compilação automática com GCC
 * [ ] Biblioteca padrão (`std`)
