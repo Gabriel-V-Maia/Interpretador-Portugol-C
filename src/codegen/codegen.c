@@ -116,7 +116,7 @@ typedef struct {
 } M_BuiltIn;
 
 M_BuiltIn builtins[] = {
-    {"escreva", "prinf"},
+    {"escreva", "printf"},
     {"leia", "scanf"},
     {"sair", "exit"}};
 
