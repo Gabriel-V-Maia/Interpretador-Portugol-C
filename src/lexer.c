@@ -53,6 +53,16 @@ lexer_T* init_lexer(char* contents, Debugger* debugger_instance)
     return lexer;
 }
 
+void lexer_skip_comment(lexer_T* lexer)
+{
+    if (lexer->currentChar == '#') 
+    {
+        while (lexer->currentChar != '\n' && lexer->currentChar != '\0') {
+            lexer_advance(lexer);
+        }
+    }
+}
+
 void lexer_advance(lexer_T* lexer)
 {
     if (lexer->currentChar != '\0' && lexer->index < lexer->contents_len)
@@ -235,6 +245,11 @@ token_T* lexer_get_next_token(lexer_T* lexer)
     {
         if (isspace(lexer->currentChar)) {
             lexer_skip_whitespace(lexer);
+            continue;
+        }
+
+        if (lexer->currentChar == '#') {
+            lexer_skip_comment(lexer);
             continue;
         }
 
